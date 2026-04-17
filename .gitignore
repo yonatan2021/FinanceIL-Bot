@@ -1,0 +1,108 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+
+# Miscellaneous
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment and Secrets (CRITICAL FOR FINANCE APP)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+
+# Finance Bot specific
+ENCRYPTION_KEY
+*.key
+credentials.json
+secrets.json
+
+# SQLite Databases
+data.db
+auth.db
+drizzle/*.db
+drizzle/*.sqlite
+drizzle/*.sqlite3
+drizzle/*.db-shm
+drizzle/*.db-wal
+drizzle/*.db-journal
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Puppeteer / Scraper (israeli-bank-scrapers)
+.puppeteer
+.chrome/
+downloads/
+screenshots/
+traces/
+
+# AI Agent Context & Internal Documentation
+# (Added recursively to ensure no subfolders leak them)
+**/.claude/*
+**/.gemini/*
+**/AGENTS.md
+**/GEMINI.md
+**/claude.md
+**/tech-audit-report.md
+.husky/*
+
+# Database Migrations — TRACKED for production deployments
+# (drizzle/ and *.sql files are intentionally NOT ignored)
+
+# Sensitive Documentation (internal only)
+docs/
+
+# Build Artifacts
+dist/
+**/dist/
+build/
+**/build/
+out/
+**/.next/
+
+# Metadata and Cache (Secret Leak Prevention)
+.build-commit
+.deps
+.ignore
+.nycrc
+.previewinfo
+.rscinfo
+.vite
+.turbo
+.contentlayer
+*.tsbuildinfo
+
+# Docker overrides
+docker-compose.override.yml
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+Desktop.ini

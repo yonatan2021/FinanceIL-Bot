@@ -1,0 +1,33 @@
+{
+  "name": "@finance-bot/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/db.js",
+  "types": "./dist/db.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/db.js",
+      "types": "./dist/db.d.ts"
+    },
+    "./schema": {
+      "import": "./dist/schema.js",
+      "types": "./dist/schema.d.ts"
+    }
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@finance-bot/types": "*",
+    "better-sqlite3-multiple-ciphers": "12.9.0",
+    "drizzle-orm": "0.45.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "drizzle-kit": "0.31.10",
+    "typescript": "6.0.2"
+  }
+}

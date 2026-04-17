@@ -1,0 +1,129 @@
+import { describe, test, expect } from 'vitest';
+import {
+  formatAmount,
+  formatBalancesMessage,
+  formatBudgetMessage,
+  formatTransactionsMessage,
+  formatUsersMessage,
+  formatScrapeLogMessage,
+} from '../formatters.js';
+import type { Budget, Transaction, AllowedUser, ScrapeLog } from '@finance-bot/types';
+
+describe('formatAmount', () => {
+  test('positive whole number', () => {
+    expect(formatAmount(12345)).toBe('₪12,345');
+  });
+  test('negative number shows minus prefix', () => {
+    expect(formatAmount(-500)).toBe('-₪500');
+  });
+  test('zero', () => {
+    expect(formatAmount(0)).toBe('₪0');
+  });
+});
+
+describe('formatBalancesMessage', () => {
+  test('empty array returns Hebrew fallback', () => {
+    expect(formatBalancesMessage([])).toBe('אין חשבונות רשומים.');
+  });
+  test('shows last 4 digits and formatted balance', () => {
+    const rows = [{ accountNumber: '123456789', balance: 1000, displayName: 'בנק לאומי' }];
+    const result = formatBalancesMessage(rows);
+    expect(result).toContain('6789');
+    expect(result).toContain('₪1,000');
+    expect(result).toContain('בנק לאומי');
+  });
+  test('null displayName falls back to "בנק"', () => {
+    const rows = [{ accountNumber: '1234', balance: 500, displayName: null }];
+    expect(formatBalancesMessage(rows)).toContain('בנק');
+  });
+});
+
+describe('formatBudgetMessage', () => {
+  const budget: Budget = {
+    id: '1', categoryName: 'מזון', monthlyLimit: 1000,
+    period: 'monthly', alertThreshold: 0.8, isActive: true, createdAt: new Date(),
+  };
+
+  test('green indicator below threshold', () => {
+    expect(formatBudgetMessage([budget], { 'מזון': 500 })).toContain('🟢');
+  });
+  test('yellow indicator at or above alert threshold', () => {
+    expect(formatBudgetMessage([budget], { 'מזון': 850 })).toContain('🟡');
+  });
+  test('red indicator at or above 100%', () => {
+    expect(formatBudgetMessage([budget], { 'מזון': 1100 })).toContain('🔴');
+  });
+  test('empty budgets returns Hebrew fallback', () => {
+    expect(formatBudgetMessage([], {})).toBe('אין תקציבים פעילים.');
+  });
+  test('null alertThreshold defaults to 0.8', () => {
+    const b = { ...budget, alertThreshold: null };
+    expect(formatBudgetMessage([b], { 'מזון': 850 })).toContain('🟡');
+  });
+});
+
+describe('formatTransactionsMessage', () => {
+  test('empty returns Hebrew fallback', () => {
+    expect(formatTransactionsMessage([])).toBe('אין עסקאות אחרונות.');
+  });
+  test('formats DD/MM · description · amount', () => {
+    const tx: Transaction = {
+      id: '1', accountId: 'a', date: new Date('2026-04-15T00:00:00Z'),
+      description: 'קפה', amount: -15, currency: 'ILS',
+      type: 'normal', category: null, status: 'completed', createdAt: new Date(),
+    };
+    const result = formatTransactionsMessage([tx]);
+    expect(result).toContain('15/04');
+    expect(result).toContain('קפה');
+    expect(result).toContain('₪15');
+  });
+});
+
+describe('formatUsersMessage', () => {
+  test('empty returns Hebrew fallback', () => {
+    expect(formatUsersMessage([])).toBe('אין משתמשים רשומים.');
+  });
+  test('active admin shows checkmark and role', () => {
+    const user: AllowedUser = {
+      id: '1', telegramId: '999', name: 'יוני', role: 'admin',
+      isActive: true, addedBy: null, createdAt: new Date(), lastSeenAt: null,
+    };
+    const result = formatUsersMessage([user]);
+    expect(result).toContain('✅');
+    expect(result).toContain('מנהל');
+    expect(result).toContain('יוני');
+  });
+  test('inactive user shows X and telegramId fallback', () => {
+    const user: AllowedUser = {
+      id: '2', telegramId: '888', name: null, role: 'viewer',
+      isActive: false, addedBy: null, createdAt: new Date(), lastSeenAt: null,
+    };
+    const result = formatUsersMessage([user]);
+    expect(result).toContain('❌');
+    expect(result).toContain('888');
+  });
+});
+
+describe('formatScrapeLogMessage', () => {
+  test('undefined returns fallback', () => {
+    expect(formatScrapeLogMessage(undefined)).toBe('אין לוגים זמינים.');
+  });
+  test('success log shows checkmark and count', () => {
+    const log: ScrapeLog = {
+      id: '1', credentialId: null, startedAt: new Date('2026-04-15'),
+      finishedAt: new Date(), transactionsFetched: 42, status: 'success', errorMessage: null,
+    };
+    const result = formatScrapeLogMessage(log);
+    expect(result).toContain('✅');
+    expect(result).toContain('42');
+  });
+  test('error log shows red and error message', () => {
+    const log: ScrapeLog = {
+      id: '2', credentialId: null, startedAt: new Date(),
+      finishedAt: null, transactionsFetched: 0, status: 'error', errorMessage: 'timeout',
+    };
+    const result = formatScrapeLogMessage(log);
+    expect(result).toContain('🔴');
+    expect(result).toContain('timeout');
+  });
+});

@@ -1,0 +1,24 @@
+{
+  "name": "@finance-bot/utils",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./crypto": {
+      "import": "./dist/crypto.js",
+      "types": "./dist/crypto.d.ts"
+    },
+    "./dates": {
+      "import": "./dist/dates.js",
+      "types": "./dist/dates.d.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2",
+    "vitest": "^2.1.0"
+  }
+}

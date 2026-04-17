@@ -1,0 +1,28 @@
+{
+  "name": "@finance-bot/bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@finance-bot/db": "*",
+    "@finance-bot/types": "*",
+    "@finance-bot/utils": "*",
+    "grammy": "1.42.0",
+    "@grammyjs/parse-mode": "^1.10.0",
+    "node-cron": "4.2.1",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2",
+    "@types/node": "^24.0.0",
+    "@types/node-cron": "^3.0.11",
+    "vitest": "^3.0.0"
+  }
+}
