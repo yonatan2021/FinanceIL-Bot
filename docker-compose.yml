@@ -16,11 +16,17 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
     volumes:
-      - ./data:/tmp/data
-      - ./data:/tmp/auth
+      - finance_data:/app/data
+      - finance_auth:/app/auth
     ports:
       - "3000:3000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   bot:
     build:
@@ -33,9 +39,10 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
     volumes:
-      - ./data:/app/data
+      - finance_data:/app/data
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     restart: unless-stopped
 
   scraper:
@@ -47,9 +54,14 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     volumes:
-      - ./data:/app/data
+      - finance_data:/app/data
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     restart: unless-stopped
     profiles:
       - scraper
+
+volumes:
+  finance_data:
+  finance_auth:
