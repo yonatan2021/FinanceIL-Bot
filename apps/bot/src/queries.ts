@@ -1,4 +1,4 @@
-import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, like, or } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
 import {
   allowedUsers,
@@ -110,4 +110,65 @@ export function getBudgetAlertCount(): number {
 export function getTotalBalance(): number {
   const accounts = getAllAccountsWithBank();
   return accounts.reduce((sum, a) => sum + a.balance, 0);
+}
+
+export function searchTransactions(options: {
+  keyword?: string;
+  category?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}) {
+  const conditions: any[] = [];
+
+  if (options.keyword) {
+    conditions.push(like(transactions.description, `%${options.keyword}%`));
+  }
+  if (options.category) {
+    conditions.push(eq(transactions.category, options.category));
+  }
+  if (options.minAmount !== undefined) {
+    conditions.push(gte(transactions.amount, options.minAmount));
+  }
+  if (options.maxAmount !== undefined) {
+    conditions.push(lte(transactions.amount, options.maxAmount));
+  }
+  if (options.startDate) {
+    conditions.push(gte(transactions.date, options.startDate));
+  }
+  if (options.endDate) {
+    conditions.push(lte(transactions.date, options.endDate));
+  }
+
+  const query = db
+    .select()
+    .from(transactions)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(transactions.date));
+
+  if (options.limit) {
+    query.limit(options.limit);
+  }
+
+  return query.all();
+}
+
+export function getAllCategories() {
+  const categories = db
+    .selectDistinct({ category: transactions.category })
+    .from(transactions)
+    .where(sql`${transactions.category} IS NOT NULL`)
+    .all();
+  return categories.map((c) => c.category).filter(Boolean) as string[];
+}
+
+export function getBudgetCategories() {
+  const result = db
+    .select({ categoryName: budgets.categoryName })
+    .from(budgets)
+    .where(eq(budgets.isActive, true))
+    .all();
+  return result.map((r) => r.categoryName);
 }

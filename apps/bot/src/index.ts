@@ -6,6 +6,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
 import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
+import { searchHandlers } from './handlers/search.js';
 import { startScheduler } from './scheduler.js';
 
 const token = process.env.BOT_TOKEN;
@@ -19,6 +20,7 @@ bot.use(authMiddleware);
 bot.use(menuHandlers);
 bot.use(dataHandlers);
 bot.use(adminHandlers);
+bot.use(searchHandlers);
 
 bot.catch((err) => {
   const ctx = err.ctx;
