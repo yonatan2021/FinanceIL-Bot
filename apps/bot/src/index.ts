@@ -41,6 +41,9 @@ startScheduler(bot);
 await bot.api.setMyCommands([
   { command: 'start', description: 'פתח את התפריט הראשי' },
   { command: 'menu', description: 'תפריט ראשי' },
+  { command: 'help', description: 'רשימת כל הפקודות' },
+  { command: 'status', description: 'Dashboard מהיר' },
+  { command: 'recent', description: '5 עסקאות אחרונות' },
 ]);
 console.error('[bot] commands registered');
 

@@ -60,18 +60,25 @@ traces/
 # AI Agent Context & Internal Documentation
 # (Added recursively to ensure no subfolders leak them)
 **/.claude/*
+# Exception: .claude/skills/ and .claude/agents/ are tracked for project setup
+.claude/skills/*
+.claude/agents/*
+.claude/agents/
+.claude/agents/**
 **/.gemini/*
 **/AGENTS.md
 **/GEMINI.md
 **/claude.md
+!CLAUDE.md
 **/tech-audit-report.md
 .husky/*
 
 # Database Migrations — TRACKED for production deployments
 # (drizzle/ and *.sql files are intentionally NOT ignored)
 
-# Sensitive Documentation (internal only)
-docs/
+# Working Documentation (internal only — not committed to Git)
+# Tracked docs/ can contain approved documentation
+docs/_working/
 
 # Build Artifacts
 dist/
@@ -106,3 +113,8 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 Desktop.ini
+.mcp.json
+docs/_old_/*
+claude.md
+!CLAUDE.md
+claude.md

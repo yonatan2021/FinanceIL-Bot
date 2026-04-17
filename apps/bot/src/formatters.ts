@@ -91,3 +91,28 @@ export function formatScrapeLogMessage(log: ScrapeLog | undefined): string {
   const err = log.errorMessage ? `\nשגיאה: ${escapeMarkdownV2(log.errorMessage)}` : '';
   return `${statusIcon} ${date}\nעסקאות: ${count}${err}`;
 }
+
+export function formatHelpMessage(): string {
+  return `*🤖 פקודות זמינות:*
+
+/start \\- פתח את התפריט הראשי
+/menu \\- תפריט ראשי
+/help \\- רשימת פקודות זו
+/status \\- dashboard מהיר (יתרות, הוצאות, התראות)
+/recent \\- 5 עסקאות אחרונות
+
+*טיפ:* השתמש בכפתורים ↓ בתפריט הראשי לסיכומים מלאים`;
+}
+
+export function formatStatusMessage(
+  totalBalance: number,
+  monthSpending: number,
+  alertCount: number,
+): string {
+  const alertIcon = alertCount > 0 ? '⚠️' : '✅';
+  return `*📊 Dashboard*
+
+💰 יתרה כוללת: ${formatAmount(totalBalance)}
+📈 הוצאות החודש: ${formatAmount(monthSpending)}
+${alertIcon} התקציבים בסכנה: ${alertCount}`;
+}

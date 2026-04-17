@@ -90,3 +90,24 @@ export function getTransactionCount(): number {
   const result = db.select({ count: sql<number>`count(*)` }).from(transactions).get();
   return result?.count ?? 0;
 }
+
+export function getBudgetAlertCount(): number {
+  const budgets = getActiveBudgets();
+  const txns = getCurrentMonthTransactions();
+  const spending: Record<string, number> = {};
+  txns.forEach((t) => {
+    if (t.category) {
+      spending[t.category] = (spending[t.category] ?? 0) + t.amount;
+    }
+  });
+  return budgets.filter((b) => {
+    const spent = spending[b.categoryName] ?? 0;
+    const threshold = b.alertThreshold ?? 0.8;
+    return b.monthlyLimit > 0 && spent / b.monthlyLimit >= threshold;
+  }).length;
+}
+
+export function getTotalBalance(): number {
+  const accounts = getAllAccountsWithBank();
+  return accounts.reduce((sum, a) => sum + a.balance, 0);
+}
