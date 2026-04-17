@@ -22,6 +22,8 @@ RUN npx tsc --build packages/types/tsconfig.json
 RUN npx tsc --build packages/utils/tsconfig.json
 RUN npx tsc --build packages/db/tsconfig.json
 
+RUN chown -R pptruser /app
+
 # Switch back to pptruser (non-root, required for Puppeteer sandbox)
 USER pptruser
 
