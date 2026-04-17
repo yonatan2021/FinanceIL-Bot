@@ -1,9 +1,11 @@
 import { betterAuth } from "better-auth";
 import Database from "better-sqlite3-multiple-ciphers";
 
-let _auth: ReturnType<typeof createAuth> | null = null;
+type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
-function createAuth() {
+let _auth: BetterAuthInstance | null = null;
+
+function createAuth(): BetterAuthInstance {
   const url = process.env.AUTH_DB_URL?.replace("file:", "") ?? "auth.db";
   const sqlite = new Database(url);
   sqlite.pragma("journal_mode=WAL");
@@ -33,10 +35,10 @@ function createAuth() {
         maxAge: 60 * 60 * 24 * 7,
       },
     },
-  });
+  }) as BetterAuthInstance;
 }
 
-export const auth = new Proxy({} as ReturnType<typeof createAuth>, {
+export const auth = new Proxy({} as BetterAuthInstance, {
   get(_target, prop: string | symbol) {
     if (!_auth) {
       _auth = createAuth();
@@ -45,4 +47,4 @@ export const auth = new Proxy({} as ReturnType<typeof createAuth>, {
   },
 });
 
-export type Auth = ReturnType<typeof createAuth>;
+export type Auth = BetterAuthInstance;
