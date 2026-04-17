@@ -14,7 +14,7 @@
     "@finance-bot/types": "*",
     "@finance-bot/utils": "*",
     "grammy": "1.42.0",
-    "@grammyjs/parse-mode": "^1.10.0",
+    "@grammyjs/parse-mode": "^2.3.0",
     "node-cron": "4.2.1",
     "dotenv": "^17.4.2",
     "tsx": "^4.19.0"
