@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot, GrammyError, HttpError } from 'grammy';
 import { parseMode } from '@grammyjs/parse-mode';
 import type { BotContext } from './types.js';
@@ -6,6 +9,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
 import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
+import { searchHandlers } from './handlers/search.js';
 import { startScheduler } from './scheduler.js';
 
 const token = process.env.BOT_TOKEN;
@@ -19,6 +23,7 @@ bot.use(authMiddleware);
 bot.use(menuHandlers);
 bot.use(dataHandlers);
 bot.use(adminHandlers);
+bot.use(searchHandlers);
 
 bot.catch((err) => {
   const ctx = err.ctx;

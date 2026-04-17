@@ -1,28 +1,30 @@
-FROM node:24-alpine
+FROM ghcr.io/puppeteer/puppeteer:24.41.0
 
 WORKDIR /app
 
-RUN addgroup -S botgroup && adduser -S botuser -G botgroup
+# Switch to root to install deps and copy files
+USER root
 
 COPY package*.json ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
-COPY apps/bot/package.json ./apps/bot/
+COPY apps/scraper/package.json ./apps/scraper/
 
 RUN npm ci
 
 COPY tsconfig.base.json ./
 COPY packages/ ./packages/
-COPY apps/bot/ ./apps/bot/
+COPY apps/scraper/ ./apps/scraper/
 
 # Build shared TypeScript packages in dependency order
 RUN npx tsc --build packages/types/tsconfig.json
 RUN npx tsc --build packages/utils/tsconfig.json
 RUN npx tsc --build packages/db/tsconfig.json
 
-RUN chown -R botuser:botgroup /app
+RUN chown -R pptruser /app
 
-USER botuser
+# Switch back to pptruser (non-root, required for Puppeteer sandbox)
+USER pptruser
 
-CMD ["npm", "run", "start", "--workspace=@finance-bot/bot"]
+CMD ["npm", "run", "start", "--workspace=apps/scraper"]

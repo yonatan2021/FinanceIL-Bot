@@ -7,7 +7,10 @@ export function mainMenuKeyboard(user: AllowedUser): InlineKeyboard {
     .text('📊 סיכום חודשי', 'menu:summary')
     .row()
     .text('📋 עסקאות אחרונות', 'menu:transactions')
-    .text('📈 תקציב', 'menu:budget');
+    .text('📈 תקציב', 'menu:budget')
+    .row()
+    .text('🔍 חיפוש', 'menu:search')
+    .text('📥 ייצוא', 'menu:export');
 
   if (user.role === 'admin') {
     kb.row().text('⚙️ הגדרות', 'menu:settings');

@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build packages
+        run: |
+          npm run build --workspace=packages/types
+          npm run build --workspace=packages/utils
+          npm run build --workspace=packages/db
+
       - name: Typecheck
         run: npm run typecheck
 
