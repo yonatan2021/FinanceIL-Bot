@@ -16,6 +16,7 @@
     }
   },
   "scripts": {
+    "build": "tsc --build",
     "generate": "drizzle-kit generate --config ../../drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config ../../drizzle.config.ts",
     "typecheck": "tsc --noEmit"
