@@ -85,9 +85,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // Mock success response — real scraper dry-run not yet wired
+  // Real dry-run not yet implemented — return honest failure so the wizard Skip button is reachable
   return NextResponse.json({
     success: true,
-    data: { ok: true, accountsFound: 2 },
+    data: {
+      ok: false,
+      accountsFound: 0,
+      errorMessage: 'בדיקת חיבור אמיתית טרם מומשה — לחץ "דלג" להמשך',
+    },
   });
 }
