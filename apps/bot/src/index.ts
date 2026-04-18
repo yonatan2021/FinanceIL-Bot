@@ -25,9 +25,9 @@ bot.use(dataHandlers);
 bot.use(adminHandlers);
 bot.use(searchHandlers);
 
-bot.catch((err) => {
+bot.catch(async (err) => {
   const ctx = err.ctx;
-  console.error(`[bot] error on update ${ctx.update.update_id}:`);
+  console.error(`[bot] error on update ${ctx.update.update_id}:`, err.error);
   const e = err.error;
   if (e instanceof GrammyError) {
     console.error('[bot] Telegram API error:', e.description);
@@ -35,6 +35,14 @@ bot.catch((err) => {
     console.error('[bot] HTTP error:', e);
   } else {
     console.error('[bot] unknown error:', e);
+  }
+  try {
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery({ text: 'אירעה שגיאה. נסה שוב.' }).catch(() => {});
+    }
+    await ctx.reply('אירעה שגיאה לא צפויה. נסה שוב מאוחר יותר.');
+  } catch (replyErr) {
+    console.error('[bot] failed to send error reply:', replyErr);
   }
 });
 

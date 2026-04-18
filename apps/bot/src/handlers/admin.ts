@@ -23,11 +23,16 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
       method: 'POST',
       headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '' },
     });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[admin] scraper API returned ${res.status}:`, body);
+    }
     const resultText = res.ok
       ? '✅ הסקרייפר הושלם בהצלחה.'
       : `❌ שגיאה: סטטוס ${res.status}`;
     await ctx.editMessageText(`🔄 ${resultText}`, { reply_markup: adminMenuKeyboard() });
-  } catch {
+  } catch (err) {
+    console.error('[admin] scraper trigger failed:', err);
     await ctx.editMessageText('❌ שגיאת חיבור לשרת.', { reply_markup: adminMenuKeyboard() });
   }
 });
