@@ -27,7 +27,7 @@ export function formatTransactionsMessage(txns: Transaction[]): string {
   return txns
     .map((t) => {
       const date = formatDateHE(new Date(t.date)).slice(0, 5); // DD/MM
-      return `${date} · ${escapeMarkdownV2(t.description)} · ${formatAmount(t.amount)}`;
+      return `${date} · ${escapeMarkdownV2(t.description)} · ${escapeMarkdownV2(formatAmount(t.amount))}`;
     })
     .join('\n');
 }
@@ -115,7 +115,7 @@ export function formatStatusMessage(
   const alertIcon = alertCount > 0 ? '⚠️' : '✅';
   return `*📊 Dashboard*
 
-💰 יתרה כוללת: ${formatAmount(totalBalance)}
-📈 הוצאות החודש: ${formatAmount(monthSpending)}
+💰 יתרה כוללת: ${escapeMarkdownV2(formatAmount(totalBalance))}
+📈 הוצאות החודש: ${escapeMarkdownV2(formatAmount(monthSpending))}
 ${alertIcon} התקציבים בסכנה: ${alertCount}`;
 }
