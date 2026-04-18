@@ -9,11 +9,12 @@ import { toast } from "sonner";
 import { useBotStatus } from "@/hooks/useBotStatus";
 import { useBotHealth } from "@/hooks/useBotHealth";
 import { useScrapeLogs } from "@/hooks/useScrapeLogs";
+import { TableSkeleton } from "@/components/ui/page-skeleton";
 
 export default function BotOverviewPage() {
-  const { status } = useBotStatus();
+  const { status, error: statusError, isLoading: statusLoading } = useBotStatus();
   const { health } = useBotHealth();
-  const { logs: recentLogs, mutate: mutateLogs } = useScrapeLogs(3);
+  const { logs: recentLogs, error: logsError, isLoading: logsLoading, mutate: mutateLogs } = useScrapeLogs(3);
   const [scrapeLoading, setScrapeLoading] = useState(false);
 
   const handleScrape = async () => {
@@ -41,7 +42,11 @@ export default function BotOverviewPage() {
         {/* Bot status card */}
         <section className="rounded-lg border bg-white p-5 space-y-3">
           <h2 className="font-semibold text-base">סטטוס בוט</h2>
-          {status === null ? (
+          {statusError ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
+              שגיאה בטעינת הנתונים.
+            </div>
+          ) : statusLoading || status === null ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
               בודק...
@@ -131,7 +136,13 @@ export default function BotOverviewPage() {
               כל הלוגים ←
             </Link>
           </div>
-          {recentLogs.length === 0 ? (
+          {logsError ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
+              שגיאה בטעינת לוגים.
+            </div>
+          ) : logsLoading ? (
+            <TableSkeleton rows={3} cols={3} />
+          ) : recentLogs.length === 0 ? (
             <p className="text-sm text-muted-foreground">אין ריצות אחרונות</p>
           ) : (
             <ul className="space-y-2">

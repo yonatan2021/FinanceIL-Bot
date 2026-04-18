@@ -7,7 +7,6 @@ import { getDb } from "@/lib/db";
 import { categoryRules } from "@finance-bot/db/schema";
 import { asc } from "drizzle-orm";
 import { z } from "zod";
-import { isValidRegex } from "@finance-bot/utils/regex";
 
 const CreateRuleSchema = z.object({
   categoryName: z.string().min(1, "שם קטגוריה נדרש"),
@@ -15,24 +14,28 @@ const CreateRuleSchema = z.object({
   priority: z.number().int().optional().default(0),
 });
 
+function isValidRegex(pattern: string): boolean {
+  try {
+    new RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  try {
-    const db = await getDb();
-    const rows = await db
-      .select()
-      .from(categoryRules)
-      .orderBy(asc(categoryRules.priority));
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(categoryRules)
+    .orderBy(asc(categoryRules.priority));
 
-    return NextResponse.json({ success: true, data: rows });
-  } catch (err) {
-    console.error("[categories/rules GET] DB error:", (err as Error).message);
-    return NextResponse.json({ error: "שגיאת מסד נתונים", code: "DB_ERROR" }, { status: 500 });
-  }
+  return NextResponse.json({ success: true, data: rows });
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -65,22 +68,17 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  try {
-    const db = await getDb();
-    const [inserted] = await db
-      .insert(categoryRules)
-      .values({
-        categoryName,
-        pattern,
-        priority,
-        isActive: true,
-        createdAt: new Date(),
-      })
-      .returning();
+  const db = await getDb();
+  const [inserted] = await db
+    .insert(categoryRules)
+    .values({
+      categoryName,
+      pattern,
+      priority,
+      isActive: true,
+      createdAt: new Date(),
+    })
+    .returning();
 
-    return NextResponse.json({ success: true, data: inserted }, { status: 201 });
-  } catch (err) {
-    console.error("[categories/rules POST] DB error:", (err as Error).message);
-    return NextResponse.json({ error: "שגיאת מסד נתונים", code: "DB_ERROR" }, { status: 500 });
-  }
+  return NextResponse.json({ success: true, data: inserted }, { status: 201 });
 }
