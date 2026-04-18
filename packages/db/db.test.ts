@@ -18,7 +18,7 @@ describe('DATABASE_URL path resolution', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    process.env.ENCRYPTION_KEY = 'a'.repeat(32);
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
   });
 
   afterEach(() => {

@@ -54,6 +54,7 @@ db-reset-dev:
 	set -euo pipefail
 	if [ -f data.db ]; then
 		mv data.db data.db.bak
+		rm -f data.db-wal data.db-shm
 		echo "→ data.db backed up to data.db.bak"
 	fi
 	if npm run db:migrate; then
