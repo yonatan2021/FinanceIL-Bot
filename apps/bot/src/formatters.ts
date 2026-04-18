@@ -1,16 +1,13 @@
 import { formatDateHE } from '@finance-bot/utils/dates';
+import { escapeMarkdownV2 } from '@finance-bot/utils/markdown';
 import type { Budget, Transaction, AllowedUser, ScrapeLog } from '@finance-bot/types';
 import type { AccountWithBank } from './queries.js';
 
-function escapeMarkdownV2(text: string): string {
-  // MarkdownV2 special chars: _ * [ ] ( ) ~ ` > # + - = | { } . !
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
-}
-
 export function formatAmount(amount: number): string {
   const abs = Math.abs(amount);
-  const formatted = abs.toLocaleString('en-US'); // comma thousands separator
-  return amount < 0 ? `-₪${formatted}` : `₪${formatted}`;
+  const formatted = abs.toLocaleString('en-US');
+  // \- escapes the minus sign for Telegram MarkdownV2
+  return amount < 0 ? `\\-₪${formatted}` : `₪${formatted}`;
 }
 
 export function formatBalancesMessage(rows: AccountWithBank[]): string {
@@ -18,7 +15,7 @@ export function formatBalancesMessage(rows: AccountWithBank[]): string {
   return rows
     .map((r) => {
       const last4 = r.accountNumber.slice(-4);
-      const name = r.displayName ?? 'בנק';
+      const name = escapeMarkdownV2(r.displayName ?? 'בנק');
       return `${name} · חשבון ${last4}: ${formatAmount(r.balance)}`;
     })
     .join('\n');
@@ -42,11 +39,12 @@ export function formatSummaryMessage(
   const lines: string[] = [];
 
   for (const [cat, spent] of Object.entries(spending)) {
+    const escapedCat = escapeMarkdownV2(cat);
     const budget = budgetMap.get(cat);
     if (budget) {
-      lines.push(`${cat}: ${formatAmount(spent)} / ${formatAmount(budget.monthlyLimit)}`);
+      lines.push(`${escapedCat}: ${formatAmount(spent)} / ${formatAmount(budget.monthlyLimit)}`);
     } else {
-      lines.push(`${cat}: ${formatAmount(spent)}`);
+      lines.push(`${escapedCat}: ${formatAmount(spent)}`);
     }
   }
 
@@ -66,7 +64,8 @@ export function formatBudgetMessage(
       const pct = limit > 0 ? spent / limit : 0;
       const pctStr = Math.round(pct * 100);
       const indicator = pct >= 1 ? '🔴' : pct >= threshold ? '🟡' : '🟢';
-      return `${indicator} ${b.categoryName}: ${pctStr}% \\(${formatAmount(spent)} / ${formatAmount(limit)}\\)`;
+      const escapedCat = escapeMarkdownV2(b.categoryName);
+      return `${indicator} ${escapedCat}: ${pctStr}% \\(${formatAmount(spent)} / ${formatAmount(limit)}\\)`;
     })
     .join('\n');
 }
@@ -77,7 +76,7 @@ export function formatUsersMessage(users: AllowedUser[]): string {
     .map((u) => {
       const status = u.isActive ? '✅' : '❌';
       const role = u.role === 'admin' ? 'מנהל' : 'צופה';
-      const name = u.name ?? u.telegramId;
+      const name = escapeMarkdownV2(u.name ?? u.telegramId);
       return `${status} ${name} \\(${role}\\)`;
     })
     .join('\n');
@@ -98,7 +97,7 @@ export function formatHelpMessage(): string {
 /start \\- פתח את התפריט הראשי
 /menu \\- תפריט ראשי
 /help \\- רשימת פקודות זו
-/status \\- dashboard מהיר (יתרות, הוצאות, התראות)
+/status \\- dashboard מהיר \\(יתרות, הוצאות, התראות\\)
 /recent \\- 5 עסקאות אחרונות
 
 *טיפ:* השתמש בכפתורים ↓ בתפריט הראשי לסיכומים מלאים`;

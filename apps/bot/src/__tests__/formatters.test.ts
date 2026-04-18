@@ -13,8 +13,9 @@ describe('formatAmount', () => {
   test('positive whole number', () => {
     expect(formatAmount(12345)).toBe('₪12,345');
   });
-  test('negative number shows minus prefix', () => {
-    expect(formatAmount(-500)).toBe('-₪500');
+  test('negative number escapes minus for MarkdownV2', () => {
+    // The returned string is \-₪500 (backslash + minus + ₪ + 500)
+    expect(formatAmount(-500)).toBe('\\-₪500');
   });
   test('zero', () => {
     expect(formatAmount(0)).toBe('₪0');
@@ -35,6 +36,11 @@ describe('formatBalancesMessage', () => {
   test('null displayName falls back to "בנק"', () => {
     const rows = [{ accountNumber: '1234', balance: 500, displayName: null }];
     expect(formatBalancesMessage(rows)).toContain('בנק');
+  });
+  test('bank name with special chars is escaped', () => {
+    const rows = [{ accountNumber: '1234', balance: 100, displayName: 'בנק.לאומי (חסכון)' }];
+    const result = formatBalancesMessage(rows);
+    expect(result).toContain('בנק\\.לאומי \\(חסכון\\)');
   });
 });
 
@@ -59,6 +65,14 @@ describe('formatBudgetMessage', () => {
   test('null alertThreshold defaults to 0.8', () => {
     const b = { ...budget, alertThreshold: null };
     expect(formatBudgetMessage([b], { 'מזון': 850 })).toContain('🟡');
+  });
+  test('category name with special chars is escaped', () => {
+    const b: Budget = {
+      id: '1', categoryName: 'מזון.בריאות', monthlyLimit: 1000,
+      period: 'monthly', alertThreshold: 0.8, isActive: true, createdAt: new Date(),
+    };
+    const result = formatBudgetMessage([b], { 'מזון.בריאות': 500 });
+    expect(result).toContain('מזון\\.בריאות');
   });
 });
 
