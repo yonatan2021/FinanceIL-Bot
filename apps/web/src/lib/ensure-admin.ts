@@ -1,4 +1,5 @@
-import { auth } from "@/auth";
+import { auth, authOptions } from "@/auth";
+import { getMigrations } from "better-auth/db/migration";
 
 export async function ensureAdminUser(): Promise<void> {
   if (!process.env.DASHBOARD_PASSWORD) {
@@ -7,6 +8,9 @@ export async function ensureAdminUser(): Promise<void> {
   if (!process.env.AUTH_SECRET) {
     throw new Error("AUTH_SECRET env var is required");
   }
+
+  const { runMigrations } = await getMigrations(authOptions);
+  await runMigrations();
 
   try {
     await auth.api.signUpEmail({
