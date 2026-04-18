@@ -1,240 +1,247 @@
-# 🗺️ Roadmap — Yoni Bot
+# 🗺️ ROADMAP — FinanceIL-Bot
 
-**Vision**: כלי פיננסים אמיתי שעובד טוב, בעברית, מקומי ובטוח.
-
----
-
-## שלב 1: Foundation (עכשיו → שבועות 1-2)
-
-### המטרה
-אתה מבין את הפרוייקט + יש לך setup בעבודה
-
-### Deliverables
-- ✍️ **Hebrew Documentation** (README, STATUS, ROADMAP, FAQ, SETUP)
-- 📊 **Status Assessment** (what works, what doesn't)
-- 🚀 **Local Setup** (npm run dev בעבודה)
-- 🎯 **Clear Direction** (מה בא הלאה?)
-
-### Success Criteria
-- [ ] You can run `npm run dev` without issues
-- [ ] You understand what each app does
-- [ ] You know what's working and what's not
-- [ ] You can message the bot and it responds
-- [ ] Dashboard loads without errors
+> Last Updated: April 2026 | Current Version: v0.1.0 | Status: Active Development
 
 ---
 
-## שלב 2: Clean It Up (שבועות 3-4)
+## מה יש כאן
 
-### המטרה
-הכל עובד טוב, בלי bugs משמעותיים
-
-### Focus Areas
-
-#### 🤖 Bot Improvements
-- Make commands more intuitive
-- Add `/status` — quick overview
-- Add `/recent` — last 10 transactions
-- Better error messages
-- `/help` should show examples
-
-#### 🌐 Dashboard Improvements
-- Better layout (currently basic)
-- Show recent transactions
-- Display bot status
-- Responsive design
-- Clean up components
-
-#### 🧪 Testing
-- Add unit tests for crypto utils
-- Add integration tests for API routes
-- Aim for 50%+ coverage (realistic goal)
-
-#### 📚 Documentation
-- Document all API endpoints
-- Document bot commands
-- Document database schema
-- Add code comments where needed
-
-### Success Criteria
-- [ ] No critical bugs
-- [ ] Bot UX is intuitive
-- [ ] Dashboard is usable
-- [ ] 30+ basic tests pass
-- [ ] Documentation is complete
+Roadmap מחולק לפי גרסאות semver. כל גרסה = milestone ברור עם Definition of Done.  
+לוגיקת גרסאות מפורטת ב-[VERSIONING.md](VERSIONING.md).
 
 ---
 
-## שלב 3: Features (חודשים 2-3)
+## ✅ v0.1.0 — Personal Foundation (קיים)
 
-### המטרה
-Implement features that actually help you
+**מטרה:** הוכחת היתכנות — בוט, scraping, ו-dashboard בסיסיים עובדים locally.
 
-### Potential Features (בסדר עדיפויות)
+**Deliverables:**
+1. Telegram bot מגיב לפקודות בסיסיות
+2. Israeli Bank MCP Scraper שולף עסקאות מהבנק
+3. Dashboard web UI בסיסי (צפייה בעסקאות)
+4. SQLite + Drizzle ORM — schema בסיסי
+5. Docker + docker-compose — מריץ הכל locally
 
-#### High Value
-1. **Transaction Categorization**
-   - Auto-categorize based on description
-   - Manual category override
-   - Bot: `/category [category]`
+**Success Criteria:**
+- [x] Bot responds to `/start`, `/help`, `/balance`
+- [x] Bank scraping מביא עסקאות מחשבון אחד לפחות
+- [x] Dashboard מציג עסקאות ברשימה
+- [x] `docker-compose up` מריץ את כל המערכת
+- [x] משתמש יחיד, local only
 
-2. **Budget Tracking**
-   - Set monthly budgets per category
-   - Warning when approaching limit
-   - Bot notifications
-
-3. **Monthly Reports**
-   - Spending by category
-   - Month-to-month comparison
-   - Bot: `/report`
-
-#### Medium Value
-4. **Export to Spreadsheet**
-   - Export transactions as CSV
-   - Dashboard button + API endpoint
-
-5. **Better Analytics**
-   - Charts on dashboard
-   - Trends (spending increasing/decreasing?)
-   - Insights ("You spent 15% more on food this month")
-
-6. **Recurring Transactions**
-   - Mark transactions as recurring
-   - Predict next month spending
-
-#### Low Value (Later)
-7. **Goals Tracking**
-   - Save for something
-   - Track progress
-8. **Multi-user Support**
-   - Share finances with spouse/family
-   - (Complex — later)
-
-### Success Criteria
-- [ ] At least 3 features implemented
-- [ ] Each feature has tests
-- [ ] Dashboard UI improved significantly
-- [ ] Test coverage 60%+
+**Definition of Done:** פורס, רץ, אפשר לשלוף עסקאות ולראות אותן. ✅
 
 ---
 
-## שלב 4: Scale (חודשים 4+)
+## 🚧 v0.2.0 — Auto-Categorization + Full Dashboard
 
-### אם נצליח בשלבים 1-3...
+**מטרה:** מהפרויקט מרגיש כמו demo → מרגיש כמו כלי עבודה אמיתי.
 
-- 🔐 **Security Hardening**
-  - Password strength requirements
-  - Rate limiting on API
-  - Better error messages (don't leak info)
+**Timeline:** ~3–4 שבועות
 
-- 📱 **Mobile Bot**
-  - Better mobile UX for dashboard
-  - (Mobile app — probably not needed)
+**Deliverables:**
+1. **Auto-Categorization** — כל עסקה מקבלת קטגוריה אוטומטית (חנויות מזון, תחבורה, בילוי, וכד')
+2. **Category Management** — ניהול קטגוריות מה-dashboard (הוספה, עריכה, override ידני)
+3. **Full Dashboard UI:**
+   - עמוד עסקאות עם filter לפי תאריך / קטגוריה
+   - עמוד הגדרות (אילו בנקים מחוברים, תזמון scraping)
+   - ניהול חשבונות מחוברים
+4. **Bot Commands** — `/transactions [month]`, `/categories`
+5. מעבר מ-basic schema לschema מלא עם relations
 
-- 🔔 **Notifications**
-  - Daily summary via bot
-  - Alert on large transactions
-  - Configurable preferences
+**Success Criteria:**
+- [ ] 90%+ מהעסקאות מקבלות קטגוריה (לא "אחר")
+- [ ] אפשר לשנות קטגוריה ידנית מה-dashboard
+- [ ] Dashboard מציג עסקאות עם filter ו-sort
+- [ ] Bot מחזיר רשימת עסקאות לפי חודש
+- [ ] settings page עובדת — אפשר להוסיף/להסיר חשבון בנק
 
-- 🌍 **Multi-Bank Support**
-  - More Israeli banks
-  - Better scraper reliability
-  - (Or: manual import)
-
-- 🏦 **Bank Integration Ideas**
-  - Direct bank APIs (if available)
-  - CSV import
-  - Manual entry with mobile photo
+**Definition of Done:** אפשר להשתמש ביומיום ולהבין את ההוצאות שלי לפי קטגוריה.
 
 ---
 
-## Timeline & Realistic Expectations
+## 📋 v0.3.0 — Budget Tracking + Anomaly Alerts
 
-### שלב 1: 1-2 שבועות
-- **Effort**: Medium (documentation heavy)
-- **Complexity**: Low (mostly writing)
+**מטרה:** מהמערכת עוקבת → המערכת מתריעה.
 
-### שלב 2: 2-3 שבועות
-- **Effort**: Medium-High (code + tests)
-- **Complexity**: Medium
+**Timeline:** ~3–4 שבועות
 
-### שלב 3: 4-6 שבועות
-- **Effort**: High (new features)
-- **Complexity**: High
+**Deliverables:**
+1. **Budget Tracking** — הגדרת תקציב חודשי לפי קטגוריה (דרך dashboard)
+2. **Budget Alerts (Bot)** — התראה אוטומטית כש-80% / 100% מהתקציב נוצל
+3. **Anomaly Detection** — זיהוי עסקאות חריגות (סכום חריג, merchant לא מוכר)
+4. **Bot Alerts** — הודעות Telegram לאנומליות
+5. **Budget Dashboard** — progress bars, השוואה חודשית
 
-### שלב 4: Open-ended
-- **Effort**: As needed
-- **Complexity**: Varies
+**Success Criteria:**
+- [ ] אפשר להגדיר תקציב חודשי לקטגוריה מה-dashboard
+- [ ] Bot שולח התראה כשעוברים 80% מהתקציב
+- [ ] עסקה > 500% מהממוצע הקטגורי מקבלת flag
+- [ ] Dashboard מציג "Spent vs Budget" לכל קטגוריה
+- [ ] אפשר לכבות/להפעיל alerts מההגדרות
 
-**Total realistic timeline: 3 months** for a solid personal tool.
-
----
-
-## Open Questions (תלוי בך!)
-
-### Priority Questions
-1. **Is local-only forever?** Or eventually cloud?
-2. **Family sharing?** Or just you?
-3. **Which feature first?** (Categorization? Budget? Reports?)
-4. **How much time per week?** (Hobby vs focused?)
-5. **What's the success metric?** (When is it "good enough"?)
-
-### Technical Questions
-1. **Scraper reliability** — worth improving? Or switch to manual import?
-2. **Bot vs Dashboard** — which matters more?
-3. **Mobile** — important eventually?
-4. **Backup strategy** — automated or manual?
+**Definition of Done:** Bot מתריע לפני שחרגתי מהתקציב, ולא אחרי.
 
 ---
 
-## How This Changes
+## 📊 v0.4.0 — Reports + Export
 
-This roadmap **is not final**.
+**מטרה:** מעקב שוטף → הבנה היסטורית וייצוא נתונים.
 
-It will change based on:
-- What actually works vs what doesn't
-- Bugs you find
-- Features you realize you need
-- Feedback from using it
+**Timeline:** ~3–4 שבועות
 
-**Revisit monthly** and adjust.
+**Deliverables:**
+1. **Monthly Report (Bot)** — דוח חודשי אוטומטי ב-1 לחודש: סיכום הוצאות, top categories, budget performance
+2. **Monthly Report (Dashboard)** — עמוד דוחות חזותי עם גרפים
+3. **CSV Export** — ייצוא עסקאות לפי טווח תאריכים
+4. **Trend View** — גרף הוצאות לפי חודש (3/6/12 חודשים אחורה)
+5. **Transaction Search** — חיפוש עסקאות לפי merchant / תיאור
 
----
+**Success Criteria:**
+- [ ] Bot שולח דוח חודשי ב-1 לחודש (cron)
+- [ ] Export לCSV עובד מה-dashboard
+- [ ] גרף trend מציג לפחות 3 חודשים
+- [ ] חיפוש עסקאות עובד
+- [ ] Dashboard מציג גרפים (pie chart קטגוריות, bar chart חודשי)
 
-## 🎯 Core Principles
-
-Whatever we build, it must be:
-
-✅ **Simple** — No unnecessary complexity  
-✅ **Reliable** — Works consistently  
-✅ **Secure** — Your data stays private  
-✅ **Understandable** — You can modify it  
-✅ **Useful** — Actually helps you manage money  
+**Definition of Done:** אפשר להסתכל על 6 חודשים אחורה ולהבין לאן הכסף הלך.
 
 ---
 
-## 📝 Track Progress
+## 🔧 v0.5.0 — Stability + Hardening
 
-As we go, mark progress:
+**מטרה:** מהפרויקט "עובד" → פרויקט "סומכים עליו".
 
-| Milestone | Target | Status |
-|-----------|--------|--------|
-| Phase 1: Foundation | 2 weeks | ⏳ In Progress |
-| Phase 2: Clean | 4 weeks | ⏳ Next |
-| Phase 3: Features | 6 weeks | 📅 Planned |
-| Phase 4: Scale | ? | 📅 Maybe |
+**Timeline:** ~4–5 שבועות
+
+**Deliverables:**
+1. **Recurring Detection** — זיהוי עסקאות קבועות (חשמל, אינטרנט, ביטוח)
+2. **Test Coverage** — הגעה ל-60%+ coverage (unit + integration)
+3. **Error Handling** — graceful handling לכל כשלי ה-scraper
+4. **Scraper Retry Logic** — retry עם backoff לכשלי scraping
+5. **Documentation** — SETUP_GUIDE מעודכן, BOT_COMMANDS_REFERENCE מלא
+6. **Logging** — structured logging לכל operations קריטיים
+
+**Success Criteria:**
+- [ ] 60%+ test coverage (`npm run test`)
+- [ ] Bot לא קורס כשה-scraper נכשל — שולח הודעת שגיאה ידידותית
+- [ ] עסקאות קבועות מוצגות עם badge "חוזר"
+- [ ] scraping מנסה שוב אוטומטית לאחר כשל
+- [ ] `npm run test` ירוק ב-CI
+
+**Definition of Done:** המערכת רצה שבוע ללא intervention.
+
+> ❓ Open Question: מה רמת ה-flakiness הנוכחית של ה-MCP scraper? זה ישפיע על עדיפות retry logic.
 
 ---
 
-## Questions?
+## 🤖 v0.6.0 — AI Finance Assistant (Local Beta)
 
-- "What should I build first?" → Finish Phase 1, then decide
-- "Can I skip tests?" → No, but can start small
-- "Is this too ambitious?" → No, it's realistic
-- "Can I help?" → Yes, suggest features/bugs in docs/_issues
+**מטרה:** מהמערכת מציגה נתונים → המערכת עונה על שאלות.
+
+**Timeline:** ~5–6 שבועות
+
+**Deliverables:**
+1. **AI Chat (Bot)** — `/ask "כמה הוצאתי על אוכל ב-3 חודשים אחרונים?"` מחזיר תשובה בשפה טבעית
+2. **Insights** — תובנות שבועיות אוטומטיות ("הוצאת 30% יותר על מסעדות מהחודש שעבר")
+3. **Context-aware** — ה-AI מכיר את הקטגוריות, תקציבים, והתנהגות שלי
+4. **Guardrails** — AI **לא** נותן ייעוץ השקעות, לא גישה לנתוני הבנק הגולמיים
+
+**Success Criteria:**
+- [ ] אפשר לשאול שאלות ב-`/ask` ולקבל תשובה ב-5 שניות
+- [ ] AI לא חורג מגבולות — לא מציע מניות, לא משתף נתונים
+- [ ] AI מציג disclaimer ברור: "מידע בלבד, לא ייעוץ פיננסי"
+- [ ] עובד fully locally (no data leaves the machine)
+
+**⚠️ הגבלות חוקיות:** AI assistant מספק מידע על עסקאות בלבד. אין ייעוץ השקעות. הנתונים הפיננסיים הם המידע הרגיש ביותר — local only בשלב זה.
+
+**Definition of Done:** אפשר לשאול "כמה הוצאתי" ולקבל תשובה מדויקת.
 
 ---
 
-**Last Updated**: April 2026  
-**Phase**: 1 — Foundation  
+## ☁️ v1.0.0 — Cloud MVP (Family-Ready)
 
+**מטרה:** מ-local tool → שירות cloud יציב שמשפחה יכולה להשתמש בו.
+
+**Timeline:** ~2–3 חודשים
+
+**Deliverables:**
+1. **Cloud Deployment** — deploy על VPS / managed service, HTTPS, domain
+2. **Multi-User (Family)** — 2–5 משתמשים לתא משפחתי, shared/separate views
+3. **Encrypted Credentials** — bank credentials מוצפנים at-rest, לא נשמרים plain text
+4. **Stable API** — versioned API שלא ישבר בין versions
+5. **Backup & Recovery** — automated daily backups לdata
+6. **Auth** — proper multi-user authentication
+
+> ✅ AI assistant (v0.6.0) — optional for v1.0.0, not required for DoD. v1.0.0 = Cloud + Family בלבד.
+
+**Success Criteria:**
+- [ ] משפחה (2+ users) יכולה להתחבר ולראות עסקאות משותפות
+- [ ] Data מוצפן at-rest ו-in-transit
+- [ ] 99% uptime במשך חודש
+- [ ] Bank credentials **לא** נשמרים plain text
+- [ ] Backup אוטומטי יומי
+- [ ] Public stable API v1 — לא ישתנה ב-patch versions
+
+**Definition of Done:** אפשר לתת לבן/בת זוג גישה בלי לפחד שהנתונים ידלפו.
+
+---
+
+## 🏢 v2.0.0 — BaaS (Bot-as-a-Service)
+
+**מטרה:** מ-shared family product → פלטפורמה multi-tenant עם billing.
+
+**Timeline:** ~3–4 חודשים
+
+**Deliverables:**
+1. **Multi-Tenant Architecture** — כל לקוח מבודד לחלוטין (DB isolation)
+2. **Dedicated Bot per Tenant** — כל לקוח מקבל בוט טלגרם נפרד משלו
+3. **Billing & Subscriptions** — מנוי חודשי, ניהול תשלומים
+4. **Admin Panel** — ניהול כל הלקוחות (onboarding, status, billing)
+5. **Business Reports** — הוצאות מוכרות, מע"מ, דוחות לחשבי שכר
+6. **SLA & Monitoring** — dashboards, alerting, incident response
+
+> ❓ Open Question: מה ה-pricing model? (per-user, per-bot, tiered?) — נקבע לפני v2.0.0.
+
+**Success Criteria:**
+- [ ] Tenant A לא יכול לראות data של Tenant B (isolation tests)
+- [ ] Onboarding עצמאי — לקוח חדש מקבל בוט תוך < 5 דקות
+- [ ] Billing מעבד תשלום בהצלחה
+- [ ] Admin Panel מציג כל הלקוחות + status
+- [ ] Business expense report ניתן לייצוא כ-PDF
+
+**Definition of Done:** לקוח חדש יכול להירשם, לשלם, ולקבל בוט — ללא intervention ידני שלי.
+
+---
+
+## 🏛️ v3.0.0 — Enterprise
+
+**מטרה:** מ-SMB → ארגונים גדולים ורגולציה ישראלית מלאה.
+
+**Timeline:** ~6+ חודשים (מ-v2.0.0)
+
+**Deliverables:**
+1. **SOC2 Readiness** — audit logs, access controls, security review
+2. **Roles & Permissions** — admin, accountant, viewer, approver
+3. **Open Banking Integration** — כשיהיה זמין רגולטורית בישראל
+4. **Advanced Business Reports** — תאימות לרו"ח ישראלי, מסמכי מע"מ
+5. **SSO / SAML** — integration ארגונית
+6. **Israeli Regulatory Compliance** — פרטיות, GDPR-equivalent
+
+**Definition of Done:** חברה עם 50 עובדים יכולה להשתמש ולעבור audit.
+
+---
+
+## 🧊 Future / Icebox
+
+רעיונות שלא ייושמו בטווח הנראה לעין — נשמרים לעתיד:
+
+| רעיון | סיבה שנדחה |
+|-------|-----------|
+| **Voice commands** (WhatsApp/Alexa) | מורכבות גבוהה, low priority |
+| **Open Banking API** (direct) | תלוי ברגולציה ישראלית — לא קיימת עדיין |
+| **Investment tracking** | רגולציה ייעוץ השקעות — out of scope |
+| **Receipt scanning (OCR)** | nice-to-have, לא core |
+| **Crypto wallets** | מחוץ ל-scope הישראלי הבנקאי |
+| **Mobile app (native)** | Web-first בינתיים — bot מספק mobile access |
+| **Bill splitting** | Feature נישתי, לא core use-case |
