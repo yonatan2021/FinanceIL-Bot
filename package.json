@@ -9,7 +9,7 @@
     "dev": "concurrently \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=apps/bot\"",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "typecheck": "tsc -b packages/types packages/utils packages/db --noEmit && tsc --noEmit -p apps/bot/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
     "test": "npm run test --workspace=packages/utils",
     "prepare": "husky"
   },

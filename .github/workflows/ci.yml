@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -38,6 +38,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Typecheck bot
+        run: tsc --noEmit -p apps/bot/tsconfig.json
 
       - name: Test
         run: npm run test --workspaces --if-present

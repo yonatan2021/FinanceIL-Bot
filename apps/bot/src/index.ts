@@ -3,7 +3,6 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot, GrammyError, HttpError } from 'grammy';
-import { parseMode } from '@grammyjs/parse-mode';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -17,7 +16,10 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
-bot.api.config.use(parseMode('MarkdownV2'));
+// @grammyjs/parse-mode v2 removed the parseMode middleware — replicate with a transformer
+bot.api.config.use((prev, method, payload, signal) =>
+  prev(method, { parse_mode: 'MarkdownV2', ...payload }, signal)
+);
 
 bot.use(authMiddleware);
 bot.use(menuHandlers);
@@ -25,9 +27,9 @@ bot.use(dataHandlers);
 bot.use(adminHandlers);
 bot.use(searchHandlers);
 
-bot.catch((err) => {
+bot.catch(async (err) => {
   const ctx = err.ctx;
-  console.error(`[bot] error on update ${ctx.update.update_id}:`);
+  console.error(`[bot] error on update ${ctx.update.update_id}:`, err.error);
   const e = err.error;
   if (e instanceof GrammyError) {
     console.error('[bot] Telegram API error:', e.description);
@@ -35,6 +37,14 @@ bot.catch((err) => {
     console.error('[bot] HTTP error:', e);
   } else {
     console.error('[bot] unknown error:', e);
+  }
+  try {
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery({ text: 'אירעה שגיאה. נסה שוב.' }).catch(() => {});
+    }
+    await ctx.reply('אירעה שגיאה לא צפויה. נסה שוב מאוחר יותר.');
+  } catch (replyErr) {
+    console.error('[bot] failed to send error reply:', replyErr);
   }
 });
 
