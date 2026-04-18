@@ -38,7 +38,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 function NavGroup({ label, items, pathname }: { label: string; items: readonly NavItem[]; pathname: string }) {
   return (
     <div>
-      <p className="px-3 mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+      <p className="px-3 mb-1.5 text-xs font-semibold text-slate-400">
         {label}
       </p>
       <div className="space-y-0.5">
