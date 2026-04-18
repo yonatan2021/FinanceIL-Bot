@@ -23,7 +23,7 @@ describe('DATABASE_URL path resolution', () => {
   it('resolves file: URI to monorepo root, not CWD', async () => {
     process.env.DATABASE_URL = 'file:./data.db';
 
-    const DatabaseMock = (await import('better-sqlite3-multiple-ciphers')).default as ReturnType<typeof vi.fn>;
+    const DatabaseMock = (await import('better-sqlite3-multiple-ciphers')).default as unknown as ReturnType<typeof vi.fn>;
     DatabaseMock.mockClear();
 
     await import('./db.js');
@@ -38,7 +38,7 @@ describe('DATABASE_URL path resolution', () => {
   it('passes through absolute DATABASE_URL unchanged', async () => {
     process.env.DATABASE_URL = '/absolute/path/custom.db';
 
-    const DatabaseMock = (await import('better-sqlite3-multiple-ciphers')).default as ReturnType<typeof vi.fn>;
+    const DatabaseMock = (await import('better-sqlite3-multiple-ciphers')).default as unknown as ReturnType<typeof vi.fn>;
     DatabaseMock.mockClear();
 
     await import('./db.js');
