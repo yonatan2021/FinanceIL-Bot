@@ -68,17 +68,26 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  const db = await getDb();
-  const [inserted] = await db
-    .insert(categoryRules)
-    .values({
-      categoryName,
-      pattern,
-      priority,
-      isActive: true,
-      createdAt: new Date(),
-    })
-    .returning();
+  try {
+    const db = await getDb();
+    const [inserted] = await db
+      .insert(categoryRules)
+      .values({
+        categoryName,
+        pattern,
+        priority,
+        isActive: true,
+        createdAt: new Date(),
+      })
+      .returning();
 
-  return NextResponse.json({ success: true, data: inserted }, { status: 201 });
+    if (!inserted) {
+      return NextResponse.json({ error: 'שמירת הכלל נכשלה', code: 'INSERT_FAILED' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: inserted }, { status: 201 });
+  } catch (err) {
+    console.error({ action: 'category_rule_create_failed', code: (err as NodeJS.ErrnoException).code });
+    return NextResponse.json({ error: 'שגיאה פנימית', code: 'INTERNAL_ERROR' }, { status: 500 });
+  }
 }
