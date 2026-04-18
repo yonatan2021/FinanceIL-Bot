@@ -70,6 +70,16 @@ export interface SchedulerJob {
   lastError: string | null;
   nextRunAt: Date | null;
   updatedAt: Date | null;
+  silentNotifications: boolean;
+}
+
+export interface BotConfig {
+  id: number;
+  dashboardUrl: string;
+  enableDeepLinks: boolean;
+  enablePinning: boolean;
+  enableConversations: boolean;
+  updatedAt: Date | null;
 }
 
 export interface BotHeartbeat {
