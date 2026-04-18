@@ -4,6 +4,7 @@ import { TTLCache, queryCache, CACHE_KEYS, CACHE_TTLS } from '../cache.js';
 describe('TTLCache', () => {
   afterEach(() => {
     vi.useRealTimers();
+    queryCache.clear();
   });
 
   it('returns undefined for a missing key', () => {
@@ -81,5 +82,13 @@ describe('TTLCache', () => {
     for (const val of Object.values(CACHE_TTLS)) {
       expect(val).toBeGreaterThan(0);
     }
+  });
+
+  it('returns undefined at the exact expiry instant', () => {
+    vi.useFakeTimers();
+    const cache = new TTLCache();
+    cache.set('k', 'val', 1_000);
+    vi.advanceTimersByTime(1_000); // exactly at expiry
+    expect(cache.get('k')).toBeUndefined();
   });
 });

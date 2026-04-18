@@ -9,7 +9,7 @@ export class TTLCache {
   get<T>(key: string): T | undefined {
     const entry = this.store.get(key);
     if (entry === undefined) return undefined;
-    if (Date.now() > entry.expiresAt) {
+    if (Date.now() >= entry.expiresAt) {
       this.store.delete(key);
       return undefined;
     }
@@ -25,7 +25,7 @@ export class TTLCache {
   }
 
   invalidatePrefix(prefix: string): void {
-    for (const key of this.store.keys()) {
+    for (const key of Array.from(this.store.keys())) {
       if (key.startsWith(prefix)) this.store.delete(key);
     }
   }
