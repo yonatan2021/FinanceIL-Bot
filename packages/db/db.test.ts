@@ -31,7 +31,7 @@ describe('DATABASE_URL path resolution', () => {
 
     await import('./db.js');
 
-    const { default: DatabaseMock } = await import('better-sqlite3-multiple-ciphers') as {
+    const { default: DatabaseMock } = await import('better-sqlite3-multiple-ciphers') as unknown as {
       default: ReturnType<typeof vi.fn>;
     };
 
@@ -47,7 +47,7 @@ describe('DATABASE_URL path resolution', () => {
 
     await import('./db.js');
 
-    const { default: DatabaseMock } = await import('better-sqlite3-multiple-ciphers') as {
+    const { default: DatabaseMock } = await import('better-sqlite3-multiple-ciphers') as unknown as {
       default: ReturnType<typeof vi.fn>;
     };
 
