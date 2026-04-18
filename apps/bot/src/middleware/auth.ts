@@ -10,36 +10,41 @@ const AUTH_LASTSEEN_INTERVAL_MS = Number(process.env.AUTH_LASTSEEN_INTERVAL_MS ?
 const lastSeenCache = new Map<string, number>();
 
 export const authMiddleware: MiddlewareFn<BotContext> = async (ctx, next) => {
-  try {
-    const chatId = ctx.chat?.id;
-    if (!chatId) return;
+  const chatId = ctx.chat?.id;
+  if (!chatId) return;
 
-    const telegramId = String(chatId);
-    const user = db
-      .select()
-      .from(allowedUsers)
-      .where(eq(allowedUsers.telegramId, telegramId))
-      .get();
+  const telegramId = String(chatId);
 
-    if (!user || !user.isActive) {
-      console.error(`[auth] unauthorized access from chat_id=${telegramId}`);
-      return;
-    }
+  // This throws on DB failure → propagates to bot.catch (correct)
+  const user = db
+    .select()
+    .from(allowedUsers)
+    .where(eq(allowedUsers.telegramId, telegramId))
+    .get();
 
-    const now = Date.now();
-    const lastWritten = lastSeenCache.get(telegramId);
-    if (!lastWritten || now - lastWritten > AUTH_LASTSEEN_INTERVAL_MS) {
-      db.update(allowedUsers)
-        .set({ lastSeenAt: new Date() })
-        .where(eq(allowedUsers.id, user.id))
-        .run();
-      lastSeenCache.set(telegramId, now);
-    }
-
-    ctx.user = user;
-    return next();
-  } catch (err) {
-    console.error('[auth] middleware error, dropping update:', (err as Error).message);
-    // Drop the update gracefully — do not crash the bot
+  if (!user || !user.isActive) {
+    console.error(`[auth] unauthorized access from chat_id=${telegramId}`);
+    return;
   }
+
+  ctx.user = user;
+
+  // Fire-and-forget lastSeenAt — write failure is non-fatal
+  const now = Date.now();
+  const lastWritten = lastSeenCache.get(telegramId);
+  if (!lastWritten || now - lastWritten > AUTH_LASTSEEN_INTERVAL_MS) {
+    lastSeenCache.set(telegramId, now);
+    Promise.resolve()
+      .then(() => {
+        db.update(allowedUsers)
+          .set({ lastSeenAt: new Date() })
+          .where(eq(allowedUsers.id, user.id))
+          .run();
+      })
+      .catch((err: Error) => {
+        console.error('[auth] lastseen_update_failed', telegramId, err.message);
+      });
+  }
+
+  return next();
 };
