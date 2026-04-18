@@ -77,9 +77,23 @@ cp .env.example .env
 # Run database migrations
 npm run db:migrate
 
+# Run auth DB migration (required on first clone / fresh environment)
+npx @better-auth/cli migrate
+
 # Start everything
 docker-compose up
 ```
+
+### First-run: Auth DB migration
+
+Before starting the web app for the first time (or on a fresh clone), run the better-auth schema migration to create the required auth tables:
+
+```bash
+# From the repo root
+npx @better-auth/cli migrate
+```
+
+This only needs to run once. After the first successful start, `ensureAdminUser` handles the rest automatically on every restart.
 
 Dashboard זמין ב: `http://localhost:3000`  
 Bot: מגיב ל-Telegram לאחר הגדרת `BOT_TOKEN` ב-`.env`
