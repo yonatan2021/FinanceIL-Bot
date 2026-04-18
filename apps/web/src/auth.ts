@@ -7,6 +7,7 @@ sqlite.pragma("journal_mode=WAL");
 
 export const authOptions = {
   secret: process.env.AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL,
   database: sqlite,
   emailAndPassword: {
     enabled: true,
