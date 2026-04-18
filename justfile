@@ -62,10 +62,10 @@ lint:
 
 # Remove build artifacts (excludes .claude/)
 clean:
-	find . -name "node_modules" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
-	find . -name ".next" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
-	find . -name "dist" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
-	find . -name ".turbo" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
+	find . -path './.claude' -prune -o -name 'node_modules' -type d -prune -exec rm -rf '{}' +
+	find . -path './.claude' -prune -o -name '.next' -type d -prune -exec rm -rf '{}' +
+	find . -path './.claude' -prune -o -name 'dist' -type d -prune -exec rm -rf '{}' +
+	find . -path './.claude' -prune -o -name '.turbo' -type d -prune -exec rm -rf '{}' +
 	@echo "→ Clean complete"
 
 # Full reset: clean then setup
