@@ -50,31 +50,38 @@ export async function PUT(
   const now = new Date();
 
   const db = await getDb();
-  await db
-    .update(schedulerState)
-    .set({ enabled, updatedAt: now })
-    .where(eq(schedulerState.jobName, jobName));
 
-  const rows = await db
-    .select()
-    .from(schedulerState)
-    .where(eq(schedulerState.jobName, jobName));
+  try {
+    const existing = await db
+      .select()
+      .from(schedulerState)
+      .where(eq(schedulerState.jobName, jobName))
+      .limit(1);
 
-  if (rows.length === 0) {
-    return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+    if (existing.length === 0) {
+      return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+    }
+
+    await db
+      .update(schedulerState)
+      .set({ enabled, updatedAt: now })
+      .where(eq(schedulerState.jobName, jobName));
+
+    const row = existing[0];
+    const data: SchedulerJob = {
+      jobName: row.jobName,
+      enabled,
+      cronExpression: row.cronExpression,
+      lastRunAt: row.lastRunAt,
+      lastStatus: row.lastStatus,
+      lastError: row.lastError,
+      nextRunAt: row.nextRunAt,
+      updatedAt: now,
+    };
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    console.error('[scheduler-job] DB error:', (err as Error).message);
+    return NextResponse.json({ error: 'שגיאת מסד נתונים', code: 'DB_ERROR' }, { status: 500 });
   }
-
-  const row = rows[0];
-  const data: SchedulerJob = {
-    jobName: row.jobName,
-    enabled: row.enabled,
-    cronExpression: row.cronExpression,
-    lastRunAt: row.lastRunAt,
-    lastStatus: row.lastStatus,
-    lastError: row.lastError,
-    nextRunAt: row.nextRunAt,
-    updatedAt: row.updatedAt,
-  };
-
-  return NextResponse.json({ success: true, data });
 }
