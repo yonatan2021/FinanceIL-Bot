@@ -4,7 +4,7 @@ export function buildSpending(txns: Transaction[]): Record<string, number> {
   const spending: Record<string, number> = {};
   for (const t of txns) {
     const cat = t.category ?? 'ללא קטגוריה';
-    spending[cat] = (spending[cat] ?? 0) + t.amount;
+    spending[cat] = (spending[cat] ?? 0) + Math.abs(t.amount);
   }
   return spending;
 }
