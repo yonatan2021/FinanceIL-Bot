@@ -3,7 +3,6 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot, GrammyError, HttpError } from 'grammy';
-import { parseMode } from '@grammyjs/parse-mode';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -17,7 +16,10 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
-bot.api.config.use(parseMode('MarkdownV2'));
+// @grammyjs/parse-mode v2 removed the parseMode middleware — replicate with a transformer
+bot.api.config.use((prev, method, payload, signal) =>
+  prev(method, { parse_mode: 'MarkdownV2', ...payload }, signal)
+);
 
 bot.use(authMiddleware);
 bot.use(menuHandlers);
