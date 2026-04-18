@@ -1,4 +1,3 @@
-// apps/bot/src/index.ts
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -13,6 +12,7 @@ import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
 import { startScheduler } from './scheduler.js';
+import { logger } from './lib/logger.js';
 
 const token = process.env.BOT_TOKEN;
 if (!token) throw new Error('BOT_TOKEN environment variable is required');
@@ -49,20 +49,30 @@ bot.use(adminHandlers);
 bot.use(searchHandlers);
 
 bot.catch(async (err) => {
-  console.error('[bot.catch]', err.error);
+  logger.error({
+    action: 'handler_error',
+    error: (err.error as Error).message ?? String(err.error),
+    telegramId: err.ctx.from?.id,
+  });
   try {
     await err.ctx.reply('אירעה שגיאה. אנא נסה שנית מאוחר יותר.');
-  } catch { /* ignore reply failure */ }
+  } catch (replyErr) {
+    logger.error({
+      action: 'error_reply_failed',
+      error: (replyErr as Error).message,
+      telegramId: err.ctx.from?.id,
+    });
+  }
 });
 
 const schedulerTasks: ScheduledTask[] = startScheduler(bot);
 
-const shutdown = () => {
+const shutdown = async (): Promise<void> => {
   schedulerTasks.forEach((t) => t.stop());
-  bot.stop();
+  await bot.stop();
 };
-process.once('SIGINT', shutdown);
-process.once('SIGTERM', shutdown);
+process.once('SIGINT', () => void shutdown());
+process.once('SIGTERM', () => void shutdown());
 
 await bot.api.setMyCommands([
   { command: 'start', description: 'פתח את התפריט הראשי' },
