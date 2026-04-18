@@ -15,6 +15,10 @@
     "./markdown": {
       "import": "./dist/markdown.js",
       "types": "./dist/markdown.d.ts"
+    },
+    "./cache": {
+      "import": "./dist/cache.js",
+      "types": "./dist/cache.d.ts"
     }
   },
   "scripts": {
