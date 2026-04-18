@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
-import { Bot, GrammyError, HttpError } from 'grammy';
+import { Bot } from 'grammy';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -16,9 +16,8 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
-// @grammyjs/parse-mode v2 removed the parseMode middleware — replicate with a transformer
 bot.api.config.use((prev, method, payload, signal) =>
-  prev(method, { parse_mode: 'MarkdownV2', ...payload }, signal)
+  prev(method, { parse_mode: 'MarkdownV2' as const, ...(payload as object) } as typeof payload, signal)
 );
 
 bot.use(authMiddleware);
@@ -28,24 +27,10 @@ bot.use(adminHandlers);
 bot.use(searchHandlers);
 
 bot.catch(async (err) => {
-  const ctx = err.ctx;
-  console.error(`[bot] error on update ${ctx.update.update_id}:`, err.error);
-  const e = err.error;
-  if (e instanceof GrammyError) {
-    console.error('[bot] Telegram API error:', e.description);
-  } else if (e instanceof HttpError) {
-    console.error('[bot] HTTP error:', e);
-  } else {
-    console.error('[bot] unknown error:', e);
-  }
+  console.error('[bot.catch]', err.error);
   try {
-    if (ctx.callbackQuery) {
-      await ctx.answerCallbackQuery({ text: 'אירעה שגיאה. נסה שוב.' }).catch(() => {});
-    }
-    await ctx.reply('אירעה שגיאה לא צפויה. נסה שוב מאוחר יותר.');
-  } catch (replyErr) {
-    console.error('[bot] failed to send error reply:', replyErr);
-  }
+    await err.ctx.reply('אירעה שגיאה. אנא נסה שנית מאוחר יותר.');
+  } catch { /* ignore reply failure */ }
 });
 
 process.once('SIGINT', () => bot.stop());
