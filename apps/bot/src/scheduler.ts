@@ -25,10 +25,10 @@ import { logger } from './lib/logger.js';
 const _rawDelay = Number(process.env.SCHEDULER_SEND_DELAY_MS);
 const SCHEDULER_SEND_DELAY_MS = Number.isFinite(_rawDelay) && _rawDelay >= 0 ? _rawDelay : 50;
 
-async function isSilent(jobName: string): Promise<boolean> {
+function isSilent(jobName: string): boolean {
   const silentDefault = process.env.SCHEDULER_SILENT_DEFAULT === 'true';
   try {
-    const row = await db.select({ silentNotifications: schedulerState.silentNotifications })
+    const row = db.select({ silentNotifications: schedulerState.silentNotifications })
       .from(schedulerState)
       .where(eq(schedulerState.jobName, jobName))
       .get();
@@ -65,7 +65,7 @@ async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
   });
   if (exceeded.length === 0) return;
 
-  const silent = await isSilent('daily-budget-alerts');
+  const silent = isSilent('daily-budget-alerts');
   const adminIds = getAdminUsers().map((u) => u.telegramId);
   const message = `⚠️ *התראת תקציב יומית*\n\n${formatBudgetMessage(exceeded, spending)}`;
   await sendToAll(bot, adminIds, message, { disable_notification: silent });
@@ -81,7 +81,7 @@ async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
   const summaryText = formatSummaryMessage(spending, activeBudgets);
   const message = `📊 *סיכום שבועי*\n\n*יתרות:*\n${balancesText}\n\n*הוצאות החודש:*\n${summaryText}`;
 
-  const silent = await isSilent('weekly-summary');
+  const silent = isSilent('weekly-summary');
   const keyboard = new InlineKeyboard().add(openDashboardButton());
 
   for (const user of users) {
@@ -112,7 +112,7 @@ async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
   const spending = buildSpending(txns);
   const message = `📈 *סיכום חודשי*\n\n${formatBudgetMessage(activeBudgets, spending)}`;
 
-  const silent = await isSilent('monthly-report');
+  const silent = isSilent('monthly-report');
   await sendToAll(bot, activeUsers.map((u) => u.telegramId), message, { disable_notification: silent });
 }
 
