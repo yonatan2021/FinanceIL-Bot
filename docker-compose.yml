@@ -7,8 +7,8 @@ services:
     environment:
       - PORT=${PORT:-3000}
       - HOSTNAME=0.0.0.0
-      - DATABASE_URL=file:/app/data/data.db
-      - AUTH_DB_URL=file:/app/auth/auth.db
+      - DATABASE_URL=/app/data/data.db
+      - AUTH_DB_URL=/app/auth/auth.db
       - AUTH_SECRET=${AUTH_SECRET}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
@@ -33,14 +33,13 @@ services:
     env_file: .env
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
-      - DATABASE_URL=file:/app/data/data.db
+      - DATABASE_URL=/app/data/data.db
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
     volumes:
       - finance_data:/app/data
     depends_on:
-      web:
-        condition: service_healthy
+      - web
     restart: unless-stopped
 
   scraper:
@@ -49,7 +48,7 @@ services:
       dockerfile: apps/scraper/Dockerfile
     env_file: .env
     environment:
-      - DATABASE_URL=file:/app/data/data.db
+      - DATABASE_URL=/app/data/data.db
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     volumes:
       - finance_data:/app/data

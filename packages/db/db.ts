@@ -16,9 +16,10 @@ const sqlite = new Database(process.env.DATABASE_URL);
 sqlite.pragma('journal_mode=WAL');
 sqlite.pragma('foreign_keys=ON');
 
-if (process.env.ENCRYPTION_KEY) {
-  sqlite.pragma(`key="${process.env.ENCRYPTION_KEY}"`);
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required');
 }
+sqlite.pragma(`key="${process.env.ENCRYPTION_KEY}"`);
 
 export const db = drizzle(sqlite, { schema });
 export type DB = typeof db;
