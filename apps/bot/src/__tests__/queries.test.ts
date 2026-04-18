@@ -3,31 +3,56 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Hoist mocks and chainMock via vi.hoisted so they are available in the vi.mock factory
 const {
   mockAll,
+  mockGet,
   mockLimit,
   mockWhere,
   mockOrderBy,
   mockFrom,
   mockSelect,
   mockSelectDistinct,
+  mockLeftJoin,
+  mockOffset,
+  mockPrepare,
   chainMock,
 } = vi.hoisted(() => {
-  const mockAll = vi.fn();
+  const mockAll = vi.fn().mockReturnValue([]);
+  const mockGet = vi.fn().mockReturnValue(undefined);
   const mockLimit = vi.fn();
   const mockWhere = vi.fn();
   const mockOrderBy = vi.fn();
   const mockFrom = vi.fn();
   const mockSelect = vi.fn();
   const mockSelectDistinct = vi.fn();
+  const mockLeftJoin = vi.fn();
+  const mockOffset = vi.fn();
+
+  // prepare() returns an object with .all() and .get() so module-level prepared statements work
+  const preparedMock: any = { all: mockAll, get: mockGet };
+  const mockPrepare = vi.fn().mockReturnValue(preparedMock);
 
   const chainMock: any = {
     from: mockFrom,
     where: mockWhere,
     orderBy: mockOrderBy,
     limit: mockLimit,
+    offset: mockOffset,
+    leftJoin: mockLeftJoin,
     all: mockAll,
+    get: mockGet,
+    prepare: mockPrepare,
   };
 
-  return { mockAll, mockLimit, mockWhere, mockOrderBy, mockFrom, mockSelect, mockSelectDistinct, chainMock };
+  // Wire all chain methods to return chainMock immediately (needed at module load time)
+  mockFrom.mockReturnValue(chainMock);
+  mockWhere.mockReturnValue(chainMock);
+  mockOrderBy.mockReturnValue(chainMock);
+  mockLimit.mockReturnValue(chainMock);
+  mockOffset.mockReturnValue(chainMock);
+  mockLeftJoin.mockReturnValue(chainMock);
+  mockSelect.mockReturnValue(chainMock);
+  mockSelectDistinct.mockReturnValue(chainMock);
+
+  return { mockAll, mockGet, mockLimit, mockWhere, mockOrderBy, mockFrom, mockSelect, mockSelectDistinct, mockLeftJoin, mockOffset, mockPrepare, chainMock };
 });
 
 vi.mock('@finance-bot/db', () => ({
@@ -46,9 +71,13 @@ beforeEach(() => {
   mockWhere.mockReturnValue(chainMock);
   mockOrderBy.mockReturnValue(chainMock);
   mockLimit.mockReturnValue(chainMock);
+  mockOffset.mockReturnValue(chainMock);
+  mockLeftJoin.mockReturnValue(chainMock);
   mockAll.mockReturnValue([]);
+  mockGet.mockReturnValue(undefined);
   mockSelect.mockReturnValue(chainMock);
   mockSelectDistinct.mockReturnValue(chainMock);
+  mockPrepare.mockReturnValue({ all: mockAll, get: mockGet });
 });
 
 import { searchTransactions, getBudgetCategories, getAllCategories, invalidateCache } from '../queries.js';

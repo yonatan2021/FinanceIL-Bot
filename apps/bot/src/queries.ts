@@ -18,56 +18,48 @@ export interface AccountWithBank {
   displayName: string | null;
 }
 
-// ---------------------------------------------------------------------------
-// TTL cache
-// ---------------------------------------------------------------------------
+// Prepared statements — compiled once on module load, reused on every call
+const preparedGetActiveBudgets = db
+  .select()
+  .from(budgets)
+  .where(eq(budgets.isActive, true))
+  .prepare();
 
-interface CacheEntry<T> { data: T; expiresAt: number; }
-const _cache = new Map<string, CacheEntry<unknown>>();
+const preparedGetAllUsers = db
+  .select()
+  .from(allowedUsers)
+  .prepare();
 
-function cached<T>(key: string, ttlMs: number, fn: () => T): T {
-  const entry = _cache.get(key) as CacheEntry<T> | undefined;
-  if (entry && Date.now() < entry.expiresAt) return entry.data;
-  const data = fn();
-  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
-  return data;
-}
+const preparedGetAdminUsers = db
+  .select()
+  .from(allowedUsers)
+  .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
+  .prepare();
 
-/**
- * Clear one cache entry by key, or flush all entries.
- * Available keys: 'currentMonthTxns' | 'activeBudgets' | 'allAccountsWithBank' |
- *   'totalBalance' | 'allUsers' | 'budgetCategories'
- *
- * Intended to be called after a successful scrape run. Not yet wired to the
- * scraper pipeline — for now, data expires by TTL only.
- */
-export function invalidateCache(key?: string): void {
-  if (key !== undefined) {
-    _cache.delete(key);
-  } else {
-    _cache.clear();
-  }
-}
+const preparedGetAllAccountsWithBank = db
+  .select({
+    accountNumber: accounts.accountNumber,
+    balance: accounts.balance,
+    displayName: credentials.displayName,
+  })
+  .from(accounts)
+  .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
+  .prepare();
 
-// ---------------------------------------------------------------------------
-// Queries
-// ---------------------------------------------------------------------------
+const preparedGetLatestScrapeLog = db
+  .select()
+  .from(scrapeLogs)
+  .orderBy(desc(scrapeLogs.startedAt))
+  .limit(1)
+  .prepare();
 
-// TTLs align to typical scrape frequency (~5 min). Financial data (30–120 s) expires
-// sooner because a scrape may update it at any time. User/category data (300 s) changes
-// rarely. Cache is per-process — web and bot do not share it.
+const preparedGetTransactionCount = db
+  .select({ count: sql<number>`count(*)` })
+  .from(transactions)
+  .prepare();
+
 export function getAllAccountsWithBank(): AccountWithBank[] {
-  return cached('allAccountsWithBank', 30_000, () =>
-    db
-      .select({
-        accountNumber: accounts.accountNumber,
-        balance: accounts.balance,
-        displayName: credentials.displayName,
-      })
-      .from(accounts)
-      .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
-      .all()
-  );
+  return preparedGetAllAccountsWithBank.all();
 }
 
 export function getRecentTransactions(limit = 10) {
@@ -91,36 +83,19 @@ export function getCurrentMonthTransactions(limit = 2_000) {
 }
 
 export function getActiveBudgets() {
-  return cached('activeBudgets', 120_000, () =>
-    db
-      .select()
-      .from(budgets)
-      .where(eq(budgets.isActive, true))
-      .all()
-  );
+  return preparedGetActiveBudgets.all();
 }
 
 export function getAllUsers() {
-  return cached('allUsers', 300_000, () =>
-    db.select().from(allowedUsers).all()
-  );
+  return preparedGetAllUsers.all();
 }
 
 export function getLatestScrapeLog() {
-  return db
-    .select()
-    .from(scrapeLogs)
-    .orderBy(desc(scrapeLogs.startedAt))
-    .limit(1)
-    .get();
+  return preparedGetLatestScrapeLog.get();
 }
 
 export function getAdminUsers() {
-  return db
-    .select()
-    .from(allowedUsers)
-    .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
-    .all();
+  return preparedGetAdminUsers.all();
 }
 
 export function getTransactionPage(page: number, pageSize = 10) {
@@ -135,7 +110,7 @@ export function getTransactionPage(page: number, pageSize = 10) {
 }
 
 export function getTransactionCount(): number {
-  const result = db.select({ count: sql<number>`count(*)` }).from(transactions).get();
+  const result = preparedGetTransactionCount.get();
   return result?.count ?? 0;
 }
 
