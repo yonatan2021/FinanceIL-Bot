@@ -67,7 +67,6 @@ function currentMonthCacheKey(): string {
 export function getAllAccountsWithBank(): AccountWithBank[] {
   const cached = queryCache.get<AccountWithBank[]>(CACHE_KEYS.BALANCES);
   if (cached !== undefined) return cached;
-  console.error('[cache miss] BALANCES');
   const result = preparedGetAllAccountsWithBank.all();
   queryCache.set(CACHE_KEYS.BALANCES, result, CACHE_TTLS.BALANCES);
   return result;
@@ -86,7 +85,6 @@ export function getCurrentMonthTransactions(limit = 2_000) {
   const key = currentMonthCacheKey();
   const cached = queryCache.get<Transaction[]>(key);
   if (cached !== undefined) return cached;
-  console.error(`[cache miss] ${key}`);
   const { start, end } = currentMonthRange();
   const result = db
     .select()
@@ -102,7 +100,6 @@ export function getCurrentMonthTransactions(limit = 2_000) {
 export function getActiveBudgets() {
   const cached = queryCache.get<Budget[]>(CACHE_KEYS.BUDGETS);
   if (cached !== undefined) return cached;
-  console.error('[cache miss] BUDGETS');
   const result = preparedGetActiveBudgets.all();
   queryCache.set(CACHE_KEYS.BUDGETS, result, CACHE_TTLS.BUDGETS);
   return result;
@@ -111,7 +108,6 @@ export function getActiveBudgets() {
 export function getAllUsers() {
   const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.USERS);
   if (cached !== undefined) return cached;
-  console.error('[cache miss] USERS');
   const result = preparedGetAllUsers.all();
   queryCache.set(CACHE_KEYS.USERS, result, CACHE_TTLS.USERS);
   return result;
@@ -120,7 +116,6 @@ export function getAllUsers() {
 export function getLatestScrapeLog() {
   const cached = queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
   if (cached !== undefined) return cached;
-  console.error('[cache miss] SCRAPE_LOG');
   const result = preparedGetLatestScrapeLog.get();
   queryCache.set(CACHE_KEYS.SCRAPE_LOG, result, CACHE_TTLS.SCRAPE_LOG);
   return result;
@@ -129,7 +124,6 @@ export function getLatestScrapeLog() {
 export function getAdminUsers() {
   const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.ADMIN_USERS);
   if (cached !== undefined) return cached;
-  console.error('[cache miss] ADMIN_USERS');
   const result = preparedGetAdminUsers.all();
   queryCache.set(CACHE_KEYS.ADMIN_USERS, result, CACHE_TTLS.ADMIN_USERS);
   return result;

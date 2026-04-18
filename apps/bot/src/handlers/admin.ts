@@ -26,8 +26,7 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
       headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '' },
     });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      logger.error({ action: 'scraper_api_error', status: res.status, body });
+      logger.error({ action: 'scraper_api_failed', status: res.status });
     }
     if (res.ok) {
       invalidateAfterScrape();
@@ -37,7 +36,7 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
       : `❌ שגיאה: סטטוס ${res.status}`;
     await ctx.editMessageText(`🔄 ${resultText}`, { reply_markup: adminMenuKeyboard() });
   } catch (err) {
-    logger.error({ action: 'scraper_trigger_failed', errorMessage: (err as Error).message });
+    logger.error({ action: 'scraper_trigger_failed', errorCode: (err as NodeJS.ErrnoException).code });
     await ctx.editMessageText('❌ שגיאת חיבור לשרת.', { reply_markup: adminMenuKeyboard() });
   }
 });

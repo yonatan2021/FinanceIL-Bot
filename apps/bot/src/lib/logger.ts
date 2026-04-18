@@ -1,23 +1,14 @@
-type LogLevel = 'info' | 'warn' | 'error';
-
-interface LogEntry {
-  level: LogLevel;
-  timestamp: string;
-  [key: string]: unknown;
-}
-
-function log(level: LogLevel, fields: Record<string, unknown>): void {
-  const entry: LogEntry = {
-    level,
-    timestamp: new Date().toISOString(),
-    ...fields,
-  };
-  // Write all log output to stderr to keep stdout clean for grammy
-  process.stderr.write(JSON.stringify(entry) + '\n');
+function log(level: 'info' | 'warn' | 'error', data: Record<string, unknown>): void {
+  const entry = JSON.stringify({ level, ts: new Date().toISOString(), ...data });
+  if (level === 'error') {
+    process.stderr.write(entry + '\n');
+  } else {
+    process.stdout.write(entry + '\n');
+  }
 }
 
 export const logger = {
-  info: (fields: Record<string, unknown>): void => log('info', fields),
-  warn: (fields: Record<string, unknown>): void => log('warn', fields),
-  error: (fields: Record<string, unknown>): void => log('error', fields),
+  info: (data: Record<string, unknown>) => log('info', data),
+  warn: (data: Record<string, unknown>) => log('warn', data),
+  error: (data: Record<string, unknown>) => log('error', data),
 };
