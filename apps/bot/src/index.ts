@@ -104,7 +104,7 @@ try {
   for (const admin of admins) {
     await bot.api.setMyCommands(
       adminCommands,
-      { scope: { type: 'chat', chat_id: Number(admin.telegramId) } },
+      { scope: { type: 'chat', chat_id: admin.telegramId } },
     );
   }
 
