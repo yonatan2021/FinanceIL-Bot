@@ -9,8 +9,14 @@ export async function ensureAdminUser(): Promise<void> {
     throw new Error("AUTH_SECRET env var is required");
   }
 
-  const { runMigrations } = await getMigrations(authOptions);
-  await runMigrations();
+  try {
+    const { runMigrations } = await getMigrations(authOptions);
+    await runMigrations();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[ensure-admin] auth DB migration failed:", msg);
+    throw err;
+  }
 
   try {
     await auth.api.signUpEmail({
