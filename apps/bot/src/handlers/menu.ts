@@ -21,10 +21,17 @@ async function showMainMenu(ctx: BotContext): Promise<void> {
   await ctx.reply('תפריט ראשי:', { reply_markup: mainMenuKeyboard(ctx.user!) });
 }
 
-menuHandlers.command(['start', 'menu'], (ctx) => showMainMenu(ctx));
+menuHandlers.command('start', async (ctx) => {
+  await ctx.reply('תפריט ראשי:', {
+    reply_markup: mainMenuKeyboard(ctx.user!),
+    reply_parameters: { message_id: ctx.message!.message_id },
+  });
+});
+
+menuHandlers.command('menu', (ctx) => showMainMenu(ctx));
 
 menuHandlers.callbackQuery('menu:back', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '←' });
   await ctx.editMessageText('תפריט ראשי:', {
     reply_markup: mainMenuKeyboard(ctx.user!),
   });
@@ -32,15 +39,17 @@ menuHandlers.callbackQuery('menu:back', async (ctx) => {
 
 menuHandlers.callbackQuery('menu:settings', async (ctx) => {
   if (ctx.user!.role !== 'admin') {
-    await ctx.answerCallbackQuery({ text: 'אין לך הרשאה לפאנל זה.' });
+    await ctx.answerCallbackQuery({ text: 'אין לך הרשאה לפאנל זה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   await ctx.editMessageText('🔧 תפריט ניהול:', { reply_markup: adminMenuKeyboard() });
 });
 
 menuHandlers.command('help', async (ctx) => {
-  await ctx.reply(formatHelpMessage());
+  await ctx.reply(formatHelpMessage(), {
+    reply_parameters: { message_id: ctx.message!.message_id },
+  });
 });
 
 menuHandlers.command('status', async (ctx) => {

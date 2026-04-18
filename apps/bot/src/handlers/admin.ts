@@ -13,10 +13,10 @@ function isAdmin(ctx: BotContext): boolean {
 
 adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: 'מופעל...' });
   await ctx.editMessageText('🔄 מפעיל סקרייפר...', { reply_markup: adminMenuKeyboard() });
 
   try {
@@ -43,10 +43,10 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
 
 adminHandlers.callbackQuery('admin:users', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const users = getAllUsers();
   const text = formatUsersMessage(users);
   await ctx.editMessageText(`👥 *משתמשים*\n\n${text}`, {
@@ -56,10 +56,10 @@ adminHandlers.callbackQuery('admin:users', async (ctx) => {
 
 adminHandlers.callbackQuery('admin:logs', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const log = getLatestScrapeLog();
   const text = formatScrapeLogMessage(log);
   await ctx.editMessageText(`📋 *לוג אחרון*\n\n${text}`, {

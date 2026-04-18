@@ -16,7 +16,8 @@ export function formatBalancesMessage(rows: AccountWithBank[]): string {
     .map((r) => {
       const last4 = r.accountNumber.slice(-4);
       const name = escapeMarkdownV2(r.displayName ?? 'בנק');
-      return `${name} · חשבון ${last4}: ${formatAmount(r.balance)}`;
+      // Digits don't need escaping; backtick wraps produce MarkdownV2 monospace
+      return `${name} · חשבון \`${last4}\`: ${escapeMarkdownV2(formatAmount(r.balance))}`;
     })
     .join('\n');
 }
@@ -39,12 +40,14 @@ export function formatSummaryMessage(
   const lines: string[] = [];
 
   for (const [cat, spent] of Object.entries(spending)) {
-    const escapedCat = escapeMarkdownV2(cat);
     const budget = budgetMap.get(cat);
     if (budget) {
-      lines.push(`${escapedCat}: ${formatAmount(spent)} / ${formatAmount(budget.monthlyLimit)}`);
+      // Quote line shows the budget limit context (comparison value)
+      const limitLine = `> תקציב: ${escapeMarkdownV2(formatAmount(budget.monthlyLimit))}`;
+      const spentLine = `${escapeMarkdownV2(cat)}: ${escapeMarkdownV2(formatAmount(spent))}`;
+      lines.push(`${spentLine}\n${limitLine}`);
     } else {
-      lines.push(`${escapedCat}: ${formatAmount(spent)}`);
+      lines.push(`${escapeMarkdownV2(cat)}: ${escapeMarkdownV2(formatAmount(spent))}`);
     }
   }
 
@@ -64,8 +67,9 @@ export function formatBudgetMessage(
       const pct = limit > 0 ? spent / limit : 0;
       const pctStr = Math.round(pct * 100);
       const indicator = pct >= 1 ? '🔴' : pct >= threshold ? '🟡' : '🟢';
-      const escapedCat = escapeMarkdownV2(b.categoryName);
-      return `${indicator} ${escapedCat}: ${pctStr}% \\(${formatAmount(spent)} / ${formatAmount(limit)}\\)`;
+      const spentSpoiler = `||${escapeMarkdownV2(formatAmount(spent))}||`;
+      const limitSpoiler = `||${escapeMarkdownV2(formatAmount(limit))}||`;
+      return `${indicator} ${escapeMarkdownV2(b.categoryName)}: ${pctStr}% \\(${spentSpoiler} / ${limitSpoiler}\\)`;
     })
     .join('\n');
 }

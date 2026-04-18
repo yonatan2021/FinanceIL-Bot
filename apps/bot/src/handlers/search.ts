@@ -15,7 +15,7 @@ const MAX_MESSAGE_LENGTH = 3800;
 export const searchHandlers = new Composer<BotContext>();
 
 searchHandlers.callbackQuery('menu:search', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   try {
     const categories = getBudgetCategories();
 
@@ -42,7 +42,7 @@ searchHandlers.callbackQuery('menu:search', async (ctx) => {
 });
 
 searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   try {
     const category = decodeURIComponent(ctx.match[1]);
     const knownCategories = getBudgetCategories();
@@ -62,11 +62,13 @@ searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
 });
 
 searchHandlers.callbackQuery('menu:export', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   try {
     const txns = getCurrentMonthTransactions();
     if (txns.length === 0) {
-      await ctx.reply('אין עסקאות לחודש הנוכחי לייצוא.');
+      await ctx.editMessageText('אין עסקאות לחודש הנוכחי לייצוא.', {
+        reply_markup: backToMenuKeyboard(),
+      });
       return;
     }
     const csv = generateCSV(txns);
