@@ -14,15 +14,15 @@
     "@finance-bot/types": "*",
     "@finance-bot/utils": "*",
     "grammy": "1.42.0",
-    "@grammyjs/parse-mode": "^1.10.0",
+    "@grammyjs/parse-mode": "^2.3.0",
     "node-cron": "4.2.1",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.4.2",
     "tsx": "^4.19.0"
   },
   "devDependencies": {
-    "typescript": "6.0.2",
-    "@types/node": "^24.0.0",
+    "typescript": "6.0.3",
+    "@types/node": "^25.6.0",
     "@types/node-cron": "^3.0.11",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.4"
   }
 }
