@@ -79,15 +79,15 @@ export function getRecentTransactions(limit = 10) {
     .all();
 }
 
-export function getCurrentMonthTransactions() {
-  return cached('currentMonthTxns', 60_000, () => {
-    const { start, end } = currentMonthRange();
-    return db
-      .select()
-      .from(transactions)
-      .where(and(gte(transactions.date, start), lte(transactions.date, end)))
-      .all();
-  });
+export function getCurrentMonthTransactions(limit = 2_000) {
+  const { start, end } = currentMonthRange();
+  return db
+    .select()
+    .from(transactions)
+    .where(and(gte(transactions.date, start), lte(transactions.date, end)))
+    .orderBy(desc(transactions.date))
+    .limit(limit)
+    .all();
 }
 
 export function getActiveBudgets() {
@@ -203,15 +203,15 @@ export function searchTransactions(options: {
     conditions.push(lte(transactions.date, options.endDate));
   }
 
-  const baseQuery = db
+  const effectiveLimit = Math.min(options.limit ?? 500, 500);
+
+  return db
     .select()
     .from(transactions)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(transactions.date));
-
-  return options.limit !== undefined
-    ? baseQuery.limit(options.limit).all()
-    : baseQuery.all();
+    .orderBy(desc(transactions.date))
+    .limit(effectiveLimit)
+    .all();
 }
 
 export function getAllCategories() {

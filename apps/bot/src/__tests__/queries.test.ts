@@ -60,9 +60,9 @@ describe('searchTransactions', () => {
     expect(mockAll).toHaveBeenCalled();
   });
 
-  it('does not call limit when no limit provided', () => {
+  it('applies default limit (500) when no limit provided', () => {
     searchTransactions({});
-    expect(mockLimit).not.toHaveBeenCalled();
+    expect(mockLimit).toHaveBeenCalledWith(500);
   });
 
   it('applies limit: 0 (undefined check, not falsy check)', () => {
