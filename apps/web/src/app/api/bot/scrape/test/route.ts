@@ -40,7 +40,6 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
