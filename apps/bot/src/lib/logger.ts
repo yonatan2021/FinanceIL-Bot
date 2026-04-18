@@ -1,5 +1,16 @@
+function safeStringify(data: Record<string, unknown>): string {
+  return JSON.stringify(data, (_key, value: unknown) =>
+    typeof value === 'bigint' ? value.toString() : value
+  );
+}
+
 function log(level: 'info' | 'warn' | 'error', data: Record<string, unknown>): void {
-  const entry = JSON.stringify({ level, ts: new Date().toISOString(), ...data });
+  let entry: string;
+  try {
+    entry = safeStringify({ level, ts: new Date().toISOString(), ...data });
+  } catch {
+    entry = JSON.stringify({ level, ts: new Date().toISOString(), serializeError: true });
+  }
   if (level === 'error') {
     process.stderr.write(entry + '\n');
   } else {
