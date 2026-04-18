@@ -20,8 +20,8 @@ if (!process.env.DATABASE_URL) {
 if (!process.env.ENCRYPTION_KEY) {
   throw new Error('ENCRYPTION_KEY environment variable is required');
 }
-if (!/^[0-9a-fA-F]{64}$/.test(process.env.ENCRYPTION_KEY)) {
-  throw new Error('ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
+if (!/^[0-9a-fA-F]{32,}$/.test(process.env.ENCRYPTION_KEY)) {
+  throw new Error('ENCRYPTION_KEY must be a hex string of at least 32 characters (no quotes allowed)');
 }
 
 // Walk up from __dirname until we find the root package.json with "workspaces".

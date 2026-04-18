@@ -21,6 +21,8 @@ export default async function DashboardPage() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const monthStartTs = Math.floor(monthStart.getTime() / 1000);
+  const monthEndTs = Math.floor(monthEnd.getTime() / 1000);
 
   const [allAccounts, recentTxs, monthlySummary] = await Promise.all([
     db
@@ -47,7 +49,7 @@ export default async function DashboardPage() {
       })
       .from(transactions)
       .where(
-        sql`${transactions.date} >= ${monthStart} AND ${transactions.date} <= ${monthEnd}`
+        sql`${transactions.date} >= ${monthStartTs} AND ${transactions.date} <= ${monthEndTs}`
       )
       .groupBy(transactions.type),
   ]);
