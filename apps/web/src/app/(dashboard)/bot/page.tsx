@@ -11,17 +11,6 @@ import { useBotHealth } from "@/hooks/useBotHealth";
 import { useScrapeLogs } from "@/hooks/useScrapeLogs";
 import { TableSkeleton } from "@/components/ui/page-skeleton";
 
-interface BotHealthData {
-  id: number;
-  lastBeatAt: string | null;
-  pid: number | null;
-  memoryMb: number | null;
-  uptimeSec: number | null;
-  lastError: string | null;
-  lastErrorAt: string | null;
-  status: 'online' | 'stale';
-}
-
 export default function BotOverviewPage() {
   const { status, error: statusError, isLoading: statusLoading } = useBotStatus();
   const { health } = useBotHealth();
