@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
-import type { SchedulerJob, SchedulerJobName, SchedulerJobStatus } from "@finance-bot/types";
+import type { SchedulerJob } from "@finance-bot/types";
 
 const DEFAULT_JOBS = [
   { jobName: 'daily-budget-alerts', cronExpression: '0 8 * * *', enabled: true },
@@ -19,41 +19,36 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
   }
 
-  try {
-    const db = await getDb();
-    let rows = await db.select().from(schedulerState);
+  const db = await getDb();
+  let rows = await db.select().from(schedulerState);
 
-    if (rows.length === 0) {
-      const now = new Date();
-      const seedRows = DEFAULT_JOBS.map((job) => ({
-        jobName: job.jobName,
-        cronExpression: job.cronExpression,
-        enabled: job.enabled,
-        lastRunAt: null,
-        lastStatus: null,
-        lastError: null,
-        nextRunAt: null,
-        updatedAt: now,
-      }));
-
-      await db.insert(schedulerState).values(seedRows);
-      rows = await db.select().from(schedulerState);
-    }
-
-    const data: SchedulerJob[] = rows.map((row) => ({
-      jobName: row.jobName as SchedulerJobName,
-      enabled: row.enabled,
-      cronExpression: row.cronExpression,
-      lastRunAt: row.lastRunAt,
-      lastStatus: row.lastStatus as SchedulerJobStatus | null,
-      lastError: row.lastError,
-      nextRunAt: row.nextRunAt,
-      updatedAt: row.updatedAt,
+  if (rows.length === 0) {
+    const now = new Date();
+    const seedRows = DEFAULT_JOBS.map((job) => ({
+      jobName: job.jobName,
+      cronExpression: job.cronExpression,
+      enabled: job.enabled,
+      lastRunAt: null,
+      lastStatus: null,
+      lastError: null,
+      nextRunAt: null,
+      updatedAt: now,
     }));
 
-    return NextResponse.json({ success: true, data });
-  } catch (err) {
-    console.error('[bot/scheduler] DB error:', (err as Error).message);
-    return NextResponse.json({ error: 'שגיאת מסד נתונים', code: 'DB_ERROR' }, { status: 500 });
+    await db.insert(schedulerState).values(seedRows);
+    rows = await db.select().from(schedulerState);
   }
+
+  const data: SchedulerJob[] = rows.map((row) => ({
+    jobName: row.jobName,
+    enabled: row.enabled,
+    cronExpression: row.cronExpression,
+    lastRunAt: row.lastRunAt,
+    lastStatus: row.lastStatus,
+    lastError: row.lastError,
+    nextRunAt: row.nextRunAt,
+    updatedAt: row.updatedAt,
+  }));
+
+  return NextResponse.json({ success: true, data });
 }

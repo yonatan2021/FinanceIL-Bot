@@ -6,12 +6,13 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
-import type { SchedulerJob, SchedulerJobName } from "@finance-bot/types";
+import type { SchedulerJob } from "@finance-bot/types";
 
-const KNOWN_JOBS: SchedulerJobName[] = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'];
+const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
+type KnownJob = typeof KNOWN_JOBS[number];
 
-function isKnownJob(value: string): value is SchedulerJobName {
-  return (KNOWN_JOBS as string[]).includes(value);
+function isKnownJob(value: string): value is KnownJob {
+  return (KNOWN_JOBS as readonly string[]).includes(value);
 }
 
 export async function PUT(
@@ -49,38 +50,31 @@ export async function PUT(
   const now = new Date();
 
   const db = await getDb();
+  await db
+    .update(schedulerState)
+    .set({ enabled, updatedAt: now })
+    .where(eq(schedulerState.jobName, jobName));
 
-  try {
-    const existing = await db
-      .select()
-      .from(schedulerState)
-      .where(eq(schedulerState.jobName, jobName))
-      .limit(1);
+  const rows = await db
+    .select()
+    .from(schedulerState)
+    .where(eq(schedulerState.jobName, jobName));
 
-    if (existing.length === 0) {
-      return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
-    }
-
-    await db
-      .update(schedulerState)
-      .set({ enabled, updatedAt: now })
-      .where(eq(schedulerState.jobName, jobName));
-
-    const row = existing[0];
-    const data: SchedulerJob = {
-      jobName: row.jobName as SchedulerJobName,
-      enabled,
-      cronExpression: row.cronExpression,
-      lastRunAt: row.lastRunAt,
-      lastStatus: row.lastStatus as ('success' | 'error') | null,
-      lastError: row.lastError,
-      nextRunAt: row.nextRunAt,
-      updatedAt: now,
-    };
-
-    return NextResponse.json({ success: true, data });
-  } catch (err) {
-    console.error('[scheduler-job] DB error:', (err as Error).message);
-    return NextResponse.json({ error: 'שגיאת מסד נתונים', code: 'DB_ERROR' }, { status: 500 });
+  if (rows.length === 0) {
+    return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
   }
+
+  const row = rows[0];
+  const data: SchedulerJob = {
+    jobName: row.jobName,
+    enabled: row.enabled,
+    cronExpression: row.cronExpression,
+    lastRunAt: row.lastRunAt,
+    lastStatus: row.lastStatus,
+    lastError: row.lastError,
+    nextRunAt: row.nextRunAt,
+    updatedAt: row.updatedAt,
+  };
+
+  return NextResponse.json({ success: true, data });
 }
