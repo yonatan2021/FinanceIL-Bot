@@ -1,0 +1,84 @@
+set dotenv-load
+set shell := ["bash", "-cu"]
+
+# Show all available recipes
+default:
+	@just --list --unsorted
+
+# First-run setup: install deps and create .env if missing
+setup:
+	npm install
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		echo "→ Created .env from .env.example"; \
+		echo "→ Open .env and fill in your secrets before running just dev"; \
+	else \
+		echo "→ .env already exists, skipping"; \
+	fi
+
+# Start all dev servers in parallel via turbo
+dev:
+	npx turbo run dev --parallel
+
+# Start web dashboard only
+dev-web:
+	npx turbo run dev --filter=@finance-bot/web
+
+# Start Telegram bot only
+dev-bot:
+	npx turbo run dev --filter=@finance-bot/bot
+
+# Start scraper only (requires package.json in apps/scraper)
+dev-scraper:
+	npx turbo run dev --filter=@finance-bot/scraper
+
+# Build all workspaces
+build:
+	npx turbo run build
+
+# Build a specific app by name (e.g. just build-app @finance-bot/web)
+build-app app:
+	npx turbo run build --filter={{app}}
+
+# Generate Drizzle migration from schema changes
+db-generate:
+	npm run db:generate
+
+# Apply pending database migrations
+db-migrate:
+	npm run db:migrate
+
+# TypeScript check across all packages
+typecheck:
+	npx turbo run typecheck
+
+# Run test suite
+test:
+	npx turbo run test
+
+# Lint all packages
+lint:
+	npx turbo run lint
+
+# Remove build artifacts (excludes .claude/)
+clean:
+	find . -name "node_modules" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
+	find . -name ".next" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
+	find . -name "dist" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
+	find . -name ".turbo" -type d -not -path "*/.claude/*" -prune -exec rm -rf {} +
+	@echo "→ Clean complete"
+
+# Full reset: clean then setup
+reset: clean setup
+
+# Start all Docker services
+docker-up:
+	docker compose up -d
+
+# Stop all Docker services
+docker-down:
+	docker compose down
+
+# Follow Docker logs
+docker-logs:
+	docker compose logs -f
