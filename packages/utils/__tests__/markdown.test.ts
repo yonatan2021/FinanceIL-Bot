@@ -41,7 +41,7 @@ describe('escapeMarkdownV2 — all special chars', () => {
     expect(escapeMarkdownV2('a\\b').split('\\').length - 1).toBe(2);
   });
 
-  it('escapes all 13 MarkdownV2 special characters', () => {
+  it('escapes all 18 MarkdownV2 special characters (excluding backslash)', () => {
     expect(escapeMarkdownV2('[a]')).toBe('\\[a\\]');
     expect(escapeMarkdownV2('`code`')).toBe('\\`code\\`');
     expect(escapeMarkdownV2('~strike~')).toBe('\\~strike\\~');
