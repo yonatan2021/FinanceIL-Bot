@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,26 +20,46 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useAllowedUsers } from "@/hooks/useAllowedUsers";
-import type { AllowedUser } from "@/hooks/useAllowedUsers";
-import { useBroadcastStore } from "@/stores/useBroadcastStore";
+
+interface UserRow {
+  id: string;
+  name: string | null;
+  telegramId: string;
+  role: string;
+  isActive: boolean | null;
+}
 
 export default function BotMessagesPage() {
-  const { users, isError: usersError, errorMessage: usersErrorMessage } = useAllowedUsers();
-  const { draftMessage, target, setDraftMessage, setTarget, clear } = useBroadcastStore();
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcastTarget, setBroadcastTarget] = useState<"all" | "admins">("all");
   const [loading, setLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AllowedUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [directMsg, setDirectMsg] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      const data = (await res.json()) as { data?: UserRow[] };
+      setUsers(data.data ?? []);
+    } catch {
+      setUsers([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchUsers();
+  }, [fetchUsers]);
+
   const handleBroadcast = async () => {
-    if (!draftMessage.trim()) return;
+    if (!broadcastMsg.trim()) return;
     setLoading(true);
     try {
       const res = await fetch("/api/bot/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: draftMessage, target }),
+        body: JSON.stringify({ message: broadcastMsg, target: broadcastTarget }),
       });
       const data = (await res.json()) as {
         success: boolean;
@@ -49,7 +69,7 @@ export default function BotMessagesPage() {
       };
       if (data.success) {
         toast.success(`נשלח ל-${data.sent ?? 0} משתמשים (${data.failed ?? 0} נכשלו)`);
-        clear();
+        setBroadcastMsg("");
       } else {
         toast.error(data.error ?? "שגיאה לא ידועה");
       }
@@ -95,8 +115,8 @@ export default function BotMessagesPage() {
             <Label htmlFor="broadcast-target">קהל יעד</Label>
             <select
               id="broadcast-target"
-              value={target}
-              onChange={(e) => setTarget(e.target.value as "all" | "admins")}
+              value={broadcastTarget}
+              onChange={(e) => setBroadcastTarget(e.target.value as "all" | "admins")}
               className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <option value="all">כל המשתמשים הפעילים</option>
@@ -107,8 +127,8 @@ export default function BotMessagesPage() {
             <Label htmlFor="broadcast-message">הודעה</Label>
             <textarea
               id="broadcast-message"
-              value={draftMessage}
-              onChange={(e) => setDraftMessage(e.target.value)}
+              value={broadcastMsg}
+              onChange={(e) => setBroadcastMsg(e.target.value)}
               placeholder="הודעה לשליחה..."
               rows={4}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -116,7 +136,7 @@ export default function BotMessagesPage() {
           </div>
           <Button
             onClick={() => void handleBroadcast()}
-            disabled={!draftMessage.trim() || loading}
+            disabled={!broadcastMsg.trim() || loading}
             className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             שלח הודעה
@@ -126,11 +146,6 @@ export default function BotMessagesPage() {
         {/* Direct message section */}
         <section className="rounded-lg border bg-white p-5 space-y-4">
           <h2 className="font-semibold text-base">שליחת הודעה ישירה</h2>
-          {usersError && (
-            <div className="p-4 text-sm text-red-500 dark:text-red-400">
-              {usersErrorMessage ?? "שגיאה בטעינת הנתונים. אנא רענן את הדף."}
-            </div>
-          )}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
