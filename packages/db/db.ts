@@ -36,13 +36,15 @@ const monorepoRoot = findMonorepoRoot(path.dirname(fileURLToPath(import.meta.url
 const dbPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(monorepoRoot, rawPath);
 const sqlite = new Database(dbPath);
 
-sqlite.pragma('journal_mode=WAL');
-sqlite.pragma('foreign_keys=ON');
-
+// CRITICAL: key pragma MUST be set BEFORE any other pragmas or SQL operations
 if (!process.env.ENCRYPTION_KEY) {
   throw new Error('ENCRYPTION_KEY environment variable is required');
 }
 sqlite.pragma(`key="${process.env.ENCRYPTION_KEY}"`);
+
+// Now set other pragmas after encryption is configured
+sqlite.pragma('journal_mode=WAL');
+sqlite.pragma('foreign_keys=ON');
 
 export const db = drizzle(sqlite, { schema });
 export type DB = typeof db;
