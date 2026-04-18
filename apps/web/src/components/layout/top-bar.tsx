@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
-const CURRENT_MONTH_HE = new Intl.DateTimeFormat("he-IL", {
-  month: "long",
-  year: "numeric",
-}).format(new Date());
+function currentMonthHE(): string {
+  return new Intl.DateTimeFormat("he-IL", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+}
 
 export function TopBar({ title }: { title: string }) {
   const router = useRouter();
@@ -28,7 +30,7 @@ export function TopBar({ title }: { title: string }) {
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
         <span className="hidden sm:inline-flex text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-          {CURRENT_MONTH_HE}
+          {currentMonthHE()}
         </span>
       </div>
       <Button
