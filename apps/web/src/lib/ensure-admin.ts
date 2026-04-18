@@ -1,3 +1,4 @@
+import { getMigrations } from "better-auth/db";
 import { auth } from "@/auth";
 
 export async function ensureAdminUser(): Promise<void> {
@@ -8,15 +9,21 @@ export async function ensureAdminUser(): Promise<void> {
     throw new Error("AUTH_SECRET env var is required");
   }
 
+  const { runMigrations } = await getMigrations(auth.options);
+  await runMigrations();
+
   try {
     await auth.api.signUpEmail({
       body: {
-        email: "admin@local",
+        email: "admin@local.dev",
         password: process.env.DASHBOARD_PASSWORD,
         name: "מנהל",
       },
     });
-  } catch {
-    // User already exists — expected on every restart after first run. Safe to ignore.
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('already exists') && !msg.includes('UNIQUE')) {
+      console.error('[ensure-admin] seed failed:', msg);
+    }
   }
 }

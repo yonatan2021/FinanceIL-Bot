@@ -1,6 +1,8 @@
 import Database from 'better-sqlite3-multiple-ciphers';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // ENCRYPTION NOTE: ENCRYPTION_KEY serves two distinct purposes:
 //   1. DB-level (here): SQLite file is fully encrypted via better-sqlite3-multiple-ciphers.
@@ -11,7 +13,11 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL env var is required');
 }
 
-const sqlite = new Database(process.env.DATABASE_URL);
+const rawPath = process.env.DATABASE_URL.replace(/^file:/, '');
+// db.ts is at packages/db/ — two levels below the monorepo root
+const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const dbPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(monorepoRoot, rawPath);
+const sqlite = new Database(dbPath);
 
 sqlite.pragma('journal_mode=WAL');
 sqlite.pragma('foreign_keys=ON');
