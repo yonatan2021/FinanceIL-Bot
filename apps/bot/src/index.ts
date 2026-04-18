@@ -1,8 +1,11 @@
+// apps/bot/src/index.ts
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot } from 'grammy';
+import { autoRetry } from '@grammyjs/auto-retry';
+import type { ScheduledTask } from 'node-cron';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -16,9 +19,28 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
+// Handle Telegram 429 (Too Many Requests) and 500 errors automatically
+bot.api.config.use(autoRetry());
+
+// Inject MarkdownV2 as default parse_mode for all API calls
 bot.api.config.use((prev, method, payload, signal) =>
   prev(method, { parse_mode: 'MarkdownV2' as const, ...(payload as object) } as typeof payload, signal)
 );
+
+// Dev-only: log raw message text when Telegram rejects MarkdownV2 formatting
+if (process.env.NODE_ENV === 'development') {
+  bot.api.config.use(async (prev, method, payload, signal) => {
+    try {
+      return await prev(method, payload, signal);
+    } catch (err) {
+      if (method === 'sendMessage' || method === 'editMessageText') {
+        const text = (payload as Record<string, unknown>)['text'];
+        console.error('[MarkdownV2 ERROR] method:', method, 'text:', String(text ?? '').slice(0, 200));
+      }
+      throw err;
+    }
+  });
+}
 
 bot.use(authMiddleware);
 bot.use(menuHandlers);
@@ -33,10 +55,14 @@ bot.catch(async (err) => {
   } catch { /* ignore reply failure */ }
 });
 
-process.once('SIGINT', () => bot.stop());
-process.once('SIGTERM', () => bot.stop());
+const schedulerTasks: ScheduledTask[] = startScheduler(bot);
 
-startScheduler(bot);
+const shutdown = () => {
+  schedulerTasks.forEach((t) => t.stop());
+  bot.stop();
+};
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
 
 await bot.api.setMyCommands([
   { command: 'start', description: 'פתח את התפריט הראשי' },
