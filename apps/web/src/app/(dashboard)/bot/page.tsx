@@ -1,21 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useBotStatus } from "@/hooks/useBotStatus";
-import { useBotHealth } from "@/hooks/useBotHealth";
-import { useScrapeLogs } from "@/hooks/useScrapeLogs";
-import { TableSkeleton } from "@/components/ui/page-skeleton";
+
+interface BotStatus {
+  ok: boolean;
+  botName?: string;
+  username?: string;
+  error?: string;
+}
+
+interface ScrapeLog {
+  id: string;
+  startedAt: string;
+  status: string;
+  transactionsFetched: number | null;
+  bankName?: string | null;
+}
 
 export default function BotOverviewPage() {
-  const { status, error: statusError, isLoading: statusLoading } = useBotStatus();
-  const { health } = useBotHealth();
-  const { logs: recentLogs, error: logsError, isLoading: logsLoading, mutate: mutateLogs } = useScrapeLogs(3);
+  const [status, setStatus] = useState<BotStatus | null>(null);
+  const [recentLogs, setRecentLogs] = useState<ScrapeLog[]>([]);
   const [scrapeLoading, setScrapeLoading] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/bot/status");
+      setStatus((await res.json()) as BotStatus);
+    } catch {
+      setStatus({ ok: false, error: "שגיאת רשת" });
+    }
+  }, []);
+
+  const fetchRecentLogs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/scrape-logs");
+      if (!res.ok) {
+        setRecentLogs([]);
+        return;
+      }
+      const data = (await res.json()) as { success: boolean; data?: ScrapeLog[] };
+      setRecentLogs((data.data ?? []).slice(0, 3));
+    } catch {
+      setRecentLogs([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchStatus();
+    void fetchRecentLogs();
+    const interval = setInterval(() => void fetchStatus(), 30_000);
+    return () => clearInterval(interval);
+  }, [fetchStatus, fetchRecentLogs]);
 
   const handleScrape = async () => {
     setScrapeLoading(true);
@@ -24,7 +64,7 @@ export default function BotOverviewPage() {
       const data = (await res.json()) as { success: boolean; error?: string };
       if (data.success) {
         toast.success("הסקרייפר הסתיים בהצלחה");
-        void mutateLogs();
+        void fetchRecentLogs();
       } else {
         toast.error(`שגיאה: ${data.error ?? "לא ידוע"}`);
       }
@@ -42,11 +82,7 @@ export default function BotOverviewPage() {
         {/* Bot status card */}
         <section className="rounded-lg border bg-white p-5 space-y-3">
           <h2 className="font-semibold text-base">סטטוס בוט</h2>
-          {statusError ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
-              שגיאה בטעינת הנתונים.
-            </div>
-          ) : statusLoading || status === null ? (
+          {status === null ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
               בודק...
@@ -71,27 +107,15 @@ export default function BotOverviewPage() {
             </Badge>
           )}
 
-          {/* Health status from heartbeat */}
+          {/* Health/next run placeholder */}
           <div className="grid grid-cols-2 gap-4 pt-1 text-sm text-muted-foreground">
             <div>
-              <span className="block text-xs uppercase tracking-wide mb-0.5">חיבור בוט</span>
-              {health === undefined ? (
-                <span>...</span>
-              ) : health === null ? (
-                <Badge variant="outline">לא מחובר</Badge>
-              ) : health.status === 'online' ? (
-                <Badge className="bg-green-600 hover:bg-green-600 text-white">בוט מחובר</Badge>
-              ) : (
-                <Badge variant="destructive">בוט לא מחובר</Badge>
-              )}
+              <span className="block text-xs uppercase tracking-wide mb-0.5">בריאות מערכת</span>
+              <span>—</span>
             </div>
             <div>
-              <span className="block text-xs uppercase tracking-wide mb-0.5">פעימה אחרונה</span>
-              <span>
-                {health?.lastBeatAt
-                  ? new Date(health.lastBeatAt).toLocaleTimeString('he-IL')
-                  : '—'}
-              </span>
+              <span className="block text-xs uppercase tracking-wide mb-0.5">ריצה הבאה</span>
+              <span>—</span>
             </div>
           </div>
         </section>
@@ -136,13 +160,7 @@ export default function BotOverviewPage() {
               כל הלוגים ←
             </Link>
           </div>
-          {logsError ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
-              שגיאה בטעינת לוגים.
-            </div>
-          ) : logsLoading ? (
-            <TableSkeleton rows={3} cols={3} />
-          ) : recentLogs.length === 0 ? (
+          {recentLogs.length === 0 ? (
             <p className="text-sm text-muted-foreground">אין ריצות אחרונות</p>
           ) : (
             <ul className="space-y-2">
