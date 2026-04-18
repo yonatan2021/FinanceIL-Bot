@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@finance-bot/db";
-import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const { db } = await import("@finance-bot/db");
+    const { sql } = await import("drizzle-orm");
     db.run(sql`SELECT 1`);
   } catch (err) {
     console.error("[health] DB check failed:", err);
