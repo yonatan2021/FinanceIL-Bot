@@ -14,8 +14,6 @@ import { BankConnectWizard } from "@/components/features/banks/BankConnectWizard
 import { BankDeleteDialog } from "@/components/features/banks/BankDeleteDialog";
 import { BANKS } from "@/lib/banks";
 import { Plus, Trash2, Landmark } from "lucide-react";
-import { useCredentials } from "@/hooks/useCredentials";
-import type { SafeCredential } from "@/hooks/useCredentials";
 
 // BankDeleteDialog expects lastScrapedAt: Date | null — adapter to satisfy its type
 type CredentialForDialog = {
@@ -38,13 +36,19 @@ export function BanksClient() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SafeCredential | null>(null);
 
-  async function handleWizardSuccess() {
-    await mutate();
+export function BanksClient({ initialCredentials }: Props) {
+  const [creds, setCreds] = useState<SafeCredential[]>(initialCredentials);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SafeCredential | null>(null);
+
+  function handleWizardSuccess(newCred: SafeCredential) {
+    setCreds((prev) => [...prev, newCred]);
   }
 
-  async function handleDeleteSuccess() {
+  function handleDeleteSuccess() {
+    if (!deleteTarget) return;
+    setCreds((prev) => prev.filter((c) => c.id !== deleteTarget.id));
     setDeleteTarget(null);
-    await mutate();
   }
 
   return (
@@ -122,7 +126,7 @@ export function BanksClient() {
       <BankConnectWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
-        onSuccess={() => void handleWizardSuccess()}
+        onSuccess={handleWizardSuccess}
       />
 
       {deleteTarget && (
@@ -131,8 +135,8 @@ export function BanksClient() {
           onOpenChange={(v) => {
             if (!v) setDeleteTarget(null);
           }}
-          credential={toDialogCredential(deleteTarget)}
-          onSuccess={() => void handleDeleteSuccess()}
+          credential={deleteTarget}
+          onSuccess={handleDeleteSuccess}
         />
       )}
     </div>
