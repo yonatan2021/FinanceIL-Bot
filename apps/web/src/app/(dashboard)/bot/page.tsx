@@ -1,24 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface BotStatus {
   ok: boolean;
@@ -27,26 +14,18 @@ interface BotStatus {
   error?: string;
 }
 
-interface UserRow {
+interface ScrapeLog {
   id: string;
-  name: string | null;
-  telegramId: string;
-  role: string;
-  isActive: boolean | null;
-  lastSeenAt: string | null;
+  startedAt: string;
+  status: string;
+  transactionsFetched: number | null;
+  bankName?: string | null;
 }
 
-export default function BotPage() {
+export default function BotOverviewPage() {
   const [status, setStatus] = useState<BotStatus | null>(null);
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [broadcastMsg, setBroadcastMsg] = useState("");
-  const [broadcastTarget, setBroadcastTarget] = useState<"all" | "admins">("all");
-  const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-  const [directMsg, setDirectMsg] = useState("");
-  const [scrapeResult, setScrapeResult] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState<ScrapeLog[]>([]);
+  const [scrapeLoading, setScrapeLoading] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -57,228 +36,174 @@ export default function BotPage() {
     }
   }, []);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchRecentLogs = useCallback(async () => {
     try {
-      const res = await fetch("/api/users");
-      const data = (await res.json()) as { data?: UserRow[] };
-      setUsers(data.data ?? []);
+      const res = await fetch("/api/scrape-logs");
+      if (!res.ok) {
+        setRecentLogs([]);
+        return;
+      }
+      const data = (await res.json()) as { success: boolean; data?: ScrapeLog[] };
+      setRecentLogs((data.data ?? []).slice(0, 3));
     } catch {
-      setUsers([]);
+      setRecentLogs([]);
     }
   }, []);
 
   useEffect(() => {
     void fetchStatus();
-    void fetchUsers();
+    void fetchRecentLogs();
     const interval = setInterval(() => void fetchStatus(), 30_000);
     return () => clearInterval(interval);
-  }, [fetchStatus, fetchUsers]);
-
-  const handleBroadcast = async () => {
-    if (!broadcastMsg.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/bot/broadcast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: broadcastMsg, target: broadcastTarget }),
-      });
-      const data = (await res.json()) as { success: boolean; sent?: number; failed?: number; error?: string };
-      setBroadcastResult(
-        data.success
-          ? `נשלח ל-${data.sent ?? 0} משתמשים (${data.failed ?? 0} נכשלו)`
-          : (data.error ?? "שגיאה לא ידועה")
-      );
-      setBroadcastMsg("");
-    } catch {
-      setBroadcastResult("שגיאת רשת");
-    }
-    setLoading(false);
-  };
-
-  const handleDirectSend = async () => {
-    if (!selectedUser || !directMsg.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/bot/notify/${selectedUser.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: directMsg }),
-      });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      setDirectMsg("");
-      setSelectedUser(null);
-      setDialogOpen(false);
-      alert(data.ok ? "הודעה נשלחה" : `שגיאה: ${data.error ?? "לא ידוע"}`);
-    } catch {
-      alert("שגיאת רשת");
-    }
-    setLoading(false);
-  };
+  }, [fetchStatus, fetchRecentLogs]);
 
   const handleScrape = async () => {
-    setLoading(true);
-    setScrapeResult("מריץ...");
+    setScrapeLoading(true);
     try {
       const res = await fetch("/api/scrape", { method: "POST" });
       const data = (await res.json()) as { success: boolean; error?: string };
-      setScrapeResult(data.success ? "הסקרייפר הסתיים בהצלחה" : `שגיאה: ${data.error ?? "לא ידוע"}`);
+      if (data.success) {
+        toast.success("הסקרייפר הסתיים בהצלחה");
+        void fetchRecentLogs();
+      } else {
+        toast.error(`שגיאה: ${data.error ?? "לא ידוע"}`);
+      }
     } catch {
-      setScrapeResult("שגיאת רשת");
+      toast.error("שגיאת רשת");
     }
-    setLoading(false);
+    setScrapeLoading(false);
   };
 
   return (
-    <div className="space-y-8 p-6">
-      <h1 className="text-2xl font-bold">ניהול בוט</h1>
+    <div>
+      <TopBar title="סקירת בוט" />
+      <div className="p-6 space-y-6">
 
-      {/* Bot Status */}
-      <section className="rounded-lg border p-4 space-y-2">
-        <h2 className="font-semibold text-lg">סטטוס בוט</h2>
-        {status == null ? (
-          <span className="text-muted-foreground text-sm">בודק...</span>
-        ) : status.ok ? (
-          <div className="flex items-center gap-2">
-            <Badge variant="default">Online</Badge>
-            <span className="text-sm">
-              {status.botName} (@{status.username})
-            </span>
+        {/* Bot status card */}
+        <section className="rounded-lg border bg-white p-5 space-y-3">
+          <h2 className="font-semibold text-base">סטטוס בוט</h2>
+          {status === null ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
+              בודק...
+            </div>
+          ) : status.ok ? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="bg-green-600 hover:bg-green-600">
+                  Online
+                </Badge>
+                <span className="text-sm font-medium">{status.botName}</span>
+                {status.username && (
+                  <span className="text-sm text-muted-foreground" dir="ltr">
+                    @{status.username}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Badge variant="destructive">
+              Offline{status.error ? ` — ${status.error}` : ""}
+            </Badge>
+          )}
+
+          {/* Health/next run placeholder */}
+          <div className="grid grid-cols-2 gap-4 pt-1 text-sm text-muted-foreground">
+            <div>
+              <span className="block text-xs uppercase tracking-wide mb-0.5">בריאות מערכת</span>
+              <span>—</span>
+            </div>
+            <div>
+              <span className="block text-xs uppercase tracking-wide mb-0.5">ריצה הבאה</span>
+              <span>—</span>
+            </div>
           </div>
-        ) : (
-          <Badge variant="destructive">Offline — {status.error}</Badge>
-        )}
-      </section>
+        </section>
 
-      {/* Users Table */}
-      <section className="rounded-lg border p-4 space-y-2">
-        <h2 className="font-semibold text-lg">משתמשים</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>שם</TableHead>
-              <TableHead>Telegram ID</TableHead>
-              <TableHead>תפקיד</TableHead>
-              <TableHead>פעיל</TableHead>
-              <TableHead>נראה לאחרונה</TableHead>
-              <TableHead>פעולות</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>{u.name ?? "—"}</TableCell>
-                <TableCell dir="ltr">{u.telegramId}</TableCell>
-                <TableCell>{u.role === "admin" ? "מנהל" : "צופה"}</TableCell>
-                <TableCell>{u.isActive ? "פעיל" : "לא פעיל"}</TableCell>
-                <TableCell>
-                  {u.lastSeenAt
-                    ? new Date(u.lastSeenAt).toLocaleDateString("he-IL")
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  <Dialog
-                    open={dialogOpen && selectedUser?.id === u.id}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setDialogOpen(false);
-                        setSelectedUser(null);
-                        setDirectMsg("");
+        {/* Quick actions */}
+        <section className="space-y-2">
+          <h2 className="font-semibold text-base">פעולות מהירות</h2>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <Link href="/bot/messages">שדר הודעה</Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void handleScrape()}
+              disabled={scrapeLoading}
+              className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              {scrapeLoading ? "מריץ..." : "הרץ סקרייפר"}
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <Link href="/bot/users">משתמשים</Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* Recent scrape logs */}
+        <section className="rounded-lg border bg-white p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-base">ריצות אחרונות</h2>
+            <Link
+              href="/bot/logs"
+              className="text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded"
+            >
+              כל הלוגים ←
+            </Link>
+          </div>
+          {recentLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">אין ריצות אחרונות</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentLogs.map((log) => (
+                <li
+                  key={log.id}
+                  className="flex items-center justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0"
+                >
+                  <span className="text-muted-foreground">
+                    {new Date(log.startedAt).toLocaleString("he-IL")}
+                    {log.bankName ? ` · ${log.bankName}` : ""}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {log.transactionsFetched != null && (
+                      <span className="text-xs text-muted-foreground" dir="ltr">
+                        {log.transactionsFetched} עסקאות
+                      </span>
+                    )}
+                    <span
+                      className={
+                        log.status === "success"
+                          ? "text-green-700 font-medium"
+                          : log.status === "error"
+                          ? "text-destructive font-medium"
+                          : "text-amber-600 font-medium"
                       }
-                    }}
-                  >
-                    <DialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setDialogOpen(true);
-                        }}
-                      >
-                        שלח הודעה
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>
-                          שליחה ישירה ל-{u.name ?? u.telegramId}
-                        </DialogTitle>
-                      </DialogHeader>
-                      <textarea
-                        value={directMsg}
-                        onChange={(e) => setDirectMsg(e.target.value)}
-                        placeholder="הקלד הודעה..."
-                        rows={4}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                      <Button
-                        onClick={() => void handleDirectSend()}
-                        disabled={!directMsg.trim() || loading}
-                      >
-                        שלח
-                      </Button>
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-            {users.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  אין משתמשים
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </section>
+                    >
+                      {log.status === "success"
+                        ? "הצלחה"
+                        : log.status === "error"
+                        ? "שגיאה"
+                        : log.status === "partial"
+                        ? "חלקי"
+                        : log.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      {/* Broadcast */}
-      <section className="rounded-lg border p-4 space-y-3">
-        <h2 className="font-semibold text-lg">שליחת הודעה לכולם</h2>
-        <div className="space-y-1">
-          <Label htmlFor="broadcast-target">קהל יעד</Label>
-          <select
-            id="broadcast-target"
-            value={broadcastTarget}
-            onChange={(e) => setBroadcastTarget(e.target.value as "all" | "admins")}
-            className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">כל המשתמשים הפעילים</option>
-            <option value="admins">מנהלים בלבד</option>
-          </select>
-        </div>
-        <textarea
-          value={broadcastMsg}
-          onChange={(e) => setBroadcastMsg(e.target.value)}
-          placeholder="הודעה לשליחה..."
-          rows={4}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <Button
-          onClick={() => void handleBroadcast()}
-          disabled={!broadcastMsg.trim() || loading}
-        >
-          שלח הודעה
-        </Button>
-        {broadcastResult != null && (
-          <p className="text-sm text-muted-foreground">{broadcastResult}</p>
-        )}
-      </section>
-
-      {/* Manual Scrape */}
-      <section className="rounded-lg border p-4 space-y-3">
-        <h2 className="font-semibold text-lg">הפעלת סקרייפר ידנית</h2>
-        <Button
-          onClick={() => void handleScrape()}
-          disabled={loading}
-          variant="outline"
-        >
-          הרץ סקרייפר עכשיו
-        </Button>
-        {scrapeResult != null && <p className="text-sm">{scrapeResult}</p>}
-      </section>
+      </div>
     </div>
   );
 }
