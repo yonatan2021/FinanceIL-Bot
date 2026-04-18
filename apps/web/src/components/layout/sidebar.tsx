@@ -6,17 +6,11 @@ import {
   LayoutDashboard,
   CreditCard,
   PiggyBank,
-  Tag,
   Landmark,
-  Bot,
   Users,
-  MessageSquare,
-  Clock,
   ScrollText,
-  BarChart2,
-  Settings,
-  Bell,
   Wallet,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +32,7 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ classN
 function NavGroup({ label, items, pathname }: { label: string; items: readonly NavItem[]; pathname: string }) {
   return (
     <div>
-      <p className="px-3 mb-1.5 text-xs font-semibold text-slate-400">
+      <p className="px-3 mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
         {label}
       </p>
       <div className="space-y-0.5">
