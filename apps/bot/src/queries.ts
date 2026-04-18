@@ -10,7 +10,8 @@ import {
   credentials,
 } from '@finance-bot/db/schema';
 import { currentMonthRange } from '@finance-bot/utils/dates';
-import type { Budget, Transaction } from '@finance-bot/types';
+import { queryCache, CACHE_KEYS, CACHE_TTLS } from '@finance-bot/utils/cache';
+import type { Transaction, AllowedUser, Budget, ScrapeLog } from '@finance-bot/types';
 
 export interface AccountWithBank {
   accountNumber: string;
@@ -58,8 +59,18 @@ const preparedGetTransactionCount = db
   .from(transactions)
   .prepare();
 
+function currentMonthCacheKey(): string {
+  const now = new Date();
+  return `${CACHE_KEYS.TRANSACTIONS_CURRENT}_${now.getFullYear()}_${now.getMonth()}`;
+}
+
 export function getAllAccountsWithBank(): AccountWithBank[] {
-  return preparedGetAllAccountsWithBank.all();
+  const cached = queryCache.get<AccountWithBank[]>(CACHE_KEYS.BALANCES);
+  if (cached !== undefined) return cached;
+  console.error('[cache miss] BALANCES');
+  const result = preparedGetAllAccountsWithBank.all();
+  queryCache.set(CACHE_KEYS.BALANCES, result, CACHE_TTLS.BALANCES);
+  return result;
 }
 
 export function getRecentTransactions(limit = 10) {
@@ -72,30 +83,56 @@ export function getRecentTransactions(limit = 10) {
 }
 
 export function getCurrentMonthTransactions(limit = 2_000) {
+  const key = currentMonthCacheKey();
+  const cached = queryCache.get<Transaction[]>(key);
+  if (cached !== undefined) return cached;
+  console.error(`[cache miss] ${key}`);
   const { start, end } = currentMonthRange();
-  return db
+  const result = db
     .select()
     .from(transactions)
     .where(and(gte(transactions.date, start), lte(transactions.date, end)))
     .orderBy(desc(transactions.date))
     .limit(limit)
     .all();
+  queryCache.set(key, result, CACHE_TTLS.TRANSACTIONS_CURRENT);
+  return result;
 }
 
 export function getActiveBudgets() {
-  return preparedGetActiveBudgets.all();
+  const cached = queryCache.get<Budget[]>(CACHE_KEYS.BUDGETS);
+  if (cached !== undefined) return cached;
+  console.error('[cache miss] BUDGETS');
+  const result = preparedGetActiveBudgets.all();
+  queryCache.set(CACHE_KEYS.BUDGETS, result, CACHE_TTLS.BUDGETS);
+  return result;
 }
 
 export function getAllUsers() {
-  return preparedGetAllUsers.all();
+  const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.USERS);
+  if (cached !== undefined) return cached;
+  console.error('[cache miss] USERS');
+  const result = preparedGetAllUsers.all();
+  queryCache.set(CACHE_KEYS.USERS, result, CACHE_TTLS.USERS);
+  return result;
 }
 
 export function getLatestScrapeLog() {
-  return preparedGetLatestScrapeLog.get();
+  const cached = queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
+  if (cached !== undefined) return cached;
+  console.error('[cache miss] SCRAPE_LOG');
+  const result = preparedGetLatestScrapeLog.get();
+  queryCache.set(CACHE_KEYS.SCRAPE_LOG, result, CACHE_TTLS.SCRAPE_LOG);
+  return result;
 }
 
 export function getAdminUsers() {
-  return preparedGetAdminUsers.all();
+  const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.ADMIN_USERS);
+  if (cached !== undefined) return cached;
+  console.error('[cache miss] ADMIN_USERS');
+  const result = preparedGetAdminUsers.all();
+  queryCache.set(CACHE_KEYS.ADMIN_USERS, result, CACHE_TTLS.ADMIN_USERS);
+  return result;
 }
 
 export function getTransactionPage(page: number, pageSize = 10) {
@@ -212,4 +249,10 @@ export function getBudgetCategories() {
       .all();
     return result.map((r) => r.categoryName);
   });
+}
+
+export function invalidateAfterScrape(): void {
+  queryCache.delete(CACHE_KEYS.BALANCES);
+  queryCache.delete(currentMonthCacheKey());
+  queryCache.delete(CACHE_KEYS.SCRAPE_LOG);
 }

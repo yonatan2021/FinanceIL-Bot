@@ -1,6 +1,6 @@
 import { Composer } from 'grammy';
 import type { BotContext } from '../types.js';
-import { getAllUsers, getLatestScrapeLog } from '../queries.js';
+import { getAllUsers, getLatestScrapeLog, invalidateAfterScrape } from '../queries.js';
 import { formatUsersMessage, formatScrapeLogMessage } from '../formatters.js';
 import { adminMenuKeyboard } from '../keyboards.js';
 import { logger } from '../lib/logger.js';
@@ -28,6 +28,9 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       logger.error({ action: 'scraper_api_error', status: res.status, body });
+    }
+    if (res.ok) {
+      invalidateAfterScrape();
     }
     const resultText = res.ok
       ? '✅ הסקרייפר הושלם בהצלחה.'
