@@ -32,10 +32,10 @@ async function sendToAll(bot: Bot<BotContext>, telegramIds: string[], message: s
 }
 
 async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
-  const budgetList = getActiveBudgets();
+  const activeBudgets = getActiveBudgets();
   const txns = getCurrentMonthTransactions();
   const spending = buildSpending(txns);
-  const exceeded = budgetList.filter((b) => {
+  const exceeded = activeBudgets.filter((b) => {
     const spent = spending[b.categoryName] ?? 0;
     const threshold = b.alertThreshold ?? 0.8;
     return b.monthlyLimit > 0 && spent / b.monthlyLimit >= threshold;
@@ -48,24 +48,26 @@ async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
 }
 
 async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
-  const users = getAllUsers().filter((u) => u.isActive);
+  const users = getAllUsers();
   const accountRows = getAllAccountsWithBank();
   const txns = getCurrentMonthTransactions();
-  const budgetList = getActiveBudgets();
+  const activeBudgets = getActiveBudgets();
+  const activeUsers = users.filter((u) => u.isActive);
   const spending = buildSpending(txns);
   const balancesText = formatBalancesMessage(accountRows);
-  const summaryText = formatSummaryMessage(spending, budgetList);
+  const summaryText = formatSummaryMessage(spending, activeBudgets);
   const message = `📊 *סיכום שבועי*\n\n*יתרות:*\n${balancesText}\n\n*הוצאות החודש:*\n${summaryText}`;
-  await sendToAll(bot, users.map((u) => u.telegramId), message);
+  await sendToAll(bot, activeUsers.map((u) => u.telegramId), message);
 }
 
 async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
-  const users = getAllUsers().filter((u) => u.isActive);
-  const budgetList = getActiveBudgets();
+  const users = getAllUsers();
+  const activeBudgets = getActiveBudgets();
   const txns = getCurrentMonthTransactions();
+  const activeUsers = users.filter((u) => u.isActive);
   const spending = buildSpending(txns);
-  const message = `📈 *סיכום חודשי*\n\n${formatBudgetMessage(budgetList, spending)}`;
-  await sendToAll(bot, users.map((u) => u.telegramId), message);
+  const message = `📈 *סיכום חודשי*\n\n${formatBudgetMessage(activeBudgets, spending)}`;
+  await sendToAll(bot, activeUsers.map((u) => u.telegramId), message);
 }
 
 export function startScheduler(bot: Bot<BotContext>): ScheduledTask[] {
