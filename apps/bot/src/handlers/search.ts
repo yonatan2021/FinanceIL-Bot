@@ -2,9 +2,13 @@ import { Composer, InlineKeyboard, InputFile } from 'grammy';
 import type { BotContext } from '../types.js';
 import { searchTransactions, getBudgetCategories, getCurrentMonthTransactions } from '../queries.js';
 import { formatTransactionsMessage } from '../formatters.js';
+import { escapeMarkdownV2 } from '@finance-bot/utils/markdown';
 import { backToMenuKeyboard } from '../keyboards.js';
 import { formatDateHE } from '@finance-bot/utils/dates';
 import type { Transaction } from '@finance-bot/types';
+
+const SEARCH_MAX_RESULTS = Number(process.env.SEARCH_MAX_RESULTS ?? 20);
+const MAX_MESSAGE_LENGTH = 3800;
 
 export const searchHandlers = new Composer<BotContext>();
 
@@ -44,10 +48,20 @@ searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
       await ctx.editMessageText('קטגוריה לא תקינה.', { reply_markup: backToMenuKeyboard() });
       return;
     }
-    const txns = searchTransactions({ category, limit: 20 });
-    const text = txns.length > 0
-      ? `🔍 *עסקאות בקטגוריה "${category}"*\n\n${formatTransactionsMessage(txns)}`
-      : `אין עסקאות בקטגוריה "${category}"`;
+
+    const txns = searchTransactions({ category, limit: SEARCH_MAX_RESULTS });
+    const escapedCat = escapeMarkdownV2(category);
+
+    let text = txns.length > 0
+      ? `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns)}`
+      : `אין עסקאות בקטגוריה "${escapedCat}"`;
+
+    if (text.length > MAX_MESSAGE_LENGTH) {
+      const truncated = `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns.slice(0, 10))}`;
+      const remaining = txns.length - 10;
+      text = `${truncated}\n\n_וישנן ${remaining} תוצאות נוספות\\. השתמש בייצוא CSV לרשימה מלאה\\._`;
+    }
+
     await ctx.editMessageText(text, { reply_markup: backToMenuKeyboard() });
   } catch (err) {
     console.error('[search] category search failed:', err);

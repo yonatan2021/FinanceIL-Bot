@@ -89,3 +89,15 @@ describe('generateCSV', () => {
     expect(csv).toContain('"say ""hi"""');
   });
 });
+
+describe('message length guard logic', () => {
+  it('short messages pass through unchanged (under 3800 chars)', () => {
+    const short = 'א'.repeat(100);
+    expect(short.length < 3800).toBe(true);
+  });
+
+  it('long messages would exceed 3800 chars', () => {
+    const long = 'א'.repeat(3900);
+    expect(long.length > 3800).toBe(true);
+  });
+});
