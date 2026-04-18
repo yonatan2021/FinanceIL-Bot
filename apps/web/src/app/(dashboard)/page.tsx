@@ -5,13 +5,18 @@ import { getDb } from "@/lib/db";
 import { accounts, transactions, credentials } from "@finance-bot/db/schema";
 import { sql, desc } from "drizzle-orm";
 import { TopBar } from "@/components/layout/top-bar";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { KpiCard } from "@/components/features/dashboard/kpi-card";
 import { formatDateHE } from "@finance-bot/utils/dates";
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  ArrowLeftRight,
+  Landmark,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -40,7 +45,7 @@ export default async function DashboardPage() {
       .select()
       .from(transactions)
       .orderBy(desc(transactions.date))
-      .limit(5),
+      .limit(8),
 
     db
       .select({
@@ -64,130 +69,168 @@ export default async function DashboardPage() {
     .filter((r) => Number(r.total) > 0)
     .reduce((s, r) => s + Number(r.total), 0);
 
+  const netSavings = totalIncome - totalExpenses;
+
   const fmt = new Intl.NumberFormat("he-IL", {
     style: "currency",
     currency: "ILS",
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
 
   return (
     <div>
       <TopBar title="לוח בקרה" />
+
       <div className="p-6 space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                יתרה כוללת
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-slate-900">
-                <span dir="ltr">{fmt.format(totalBalance)}</span>
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                סה&quot;כ הוצאות החודש
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-red-600">
-                <span dir="ltr">{fmt.format(totalExpenses)}</span>
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                סה&quot;כ הכנסות החודש
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">
-                <span dir="ltr">{fmt.format(totalIncome)}</span>
-              </p>
-            </CardContent>
-          </Card>
+
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <KpiCard
+            title="יתרה כוללת"
+            formattedValue={fmt.format(totalBalance)}
+            icon={Wallet}
+            variant="balance"
+            subtitle={`${allAccounts.length} חשבונות`}
+          />
+          <KpiCard
+            title="הכנסות החודש"
+            formattedValue={fmt.format(totalIncome)}
+            icon={TrendingUp}
+            variant="income"
+          />
+          <KpiCard
+            title="הוצאות החודש"
+            formattedValue={fmt.format(totalExpenses)}
+            icon={TrendingDown}
+            variant="expense"
+          />
+          <KpiCard
+            title="חיסכון נטו"
+            formattedValue={fmt.format(Math.abs(netSavings))}
+            icon={ArrowLeftRight}
+            variant={netSavings >= 0 ? "net-positive" : "net-negative"}
+            subtitle={netSavings < 0 ? "גירעון החודש" : "עודף החודש"}
+          />
         </div>
 
-        {/* Accounts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>חשבונות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {allAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {account.bankName ?? account.bankId}
-                    </p>
-                    <p className="text-sm text-muted-foreground" dir="ltr">
-                      {account.accountNumber}
-                    </p>
-                  </div>
-                  <span
-                    className={`font-bold text-lg ${account.balance >= 0 ? "text-green-700" : "text-red-600"}`}
-                    dir="ltr"
-                  >
-                    {fmt.format(account.balance)}
-                  </span>
-                </div>
-              ))}
-              {allAccounts.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">
-                  אין חשבונות מחוברים
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* 2-column: Accounts (1/3) + Recent Transactions (2/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>5 עסקאות אחרונות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentTxs.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900 truncate max-w-xs">
-                      {tx.description}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDateHE(tx.date)}
-                      {tx.category && ` · ${tx.category}`}
-                    </p>
-                  </div>
-                  <span
-                    className={`font-bold ${tx.amount >= 0 ? "text-green-700" : "text-red-600"}`}
-                    dir="ltr"
+          {/* Accounts */}
+          <Card className="border border-slate-200 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-800">
+                  חשבונות בנק
+                </CardTitle>
+                <Landmark className="h-4 w-4 text-slate-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-3">
+              {allAccounts.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-sm text-slate-500">אין חשבונות מחוברים</p>
+                  <a
+                    href="/banks"
+                    className="text-xs text-primary hover:underline underline-offset-2"
                   >
-                    {fmt.format(tx.amount)}
-                  </span>
+                    חבר בנק ראשון
+                  </a>
                 </div>
-              ))}
-              {recentTxs.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">
-                  אין עסקאות
-                </p>
+              ) : (
+                <div className="space-y-2">
+                  {allAccounts.map((account) => (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {account.bankName ?? account.bankId}
+                        </p>
+                        <p className="text-xs text-slate-400 font-mono" dir="ltr">
+                          ****{account.accountNumber?.slice(-4) ?? ""}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums shrink-0 ms-2",
+                          account.balance >= 0 ? "text-emerald-700" : "text-red-600"
+                        )}
+                        dir="ltr"
+                      >
+                        {fmt.format(account.balance)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Recent Transactions */}
+          <Card className="lg:col-span-2 border border-slate-200 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-800">
+                  עסקאות אחרונות
+                </CardTitle>
+                <a
+                  href="/transactions"
+                  className="text-xs text-primary hover:underline underline-offset-2"
+                >
+                  הצג הכל
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-3">
+              {recentTxs.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-slate-500">אין עסקאות</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {recentTxs.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between py-3 gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {tx.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-slate-400">
+                            {formatDateHE(tx.date)}
+                          </span>
+                          {tx.category && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs px-1.5 py-0 h-4 font-normal"
+                            >
+                              {tx.category}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums shrink-0",
+                          tx.amount >= 0 ? "text-emerald-700" : "text-red-600"
+                        )}
+                        dir="ltr"
+                      >
+                        {fmt.format(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
     </div>
   );
