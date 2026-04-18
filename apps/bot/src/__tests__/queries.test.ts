@@ -41,6 +41,7 @@ vi.mock('@finance-bot/db', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  invalidateCache();
   mockFrom.mockReturnValue(chainMock);
   mockWhere.mockReturnValue(chainMock);
   mockOrderBy.mockReturnValue(chainMock);
@@ -50,7 +51,7 @@ beforeEach(() => {
   mockSelectDistinct.mockReturnValue(chainMock);
 });
 
-import { searchTransactions, getBudgetCategories, getAllCategories } from '../queries.js';
+import { searchTransactions, getBudgetCategories, getAllCategories, invalidateCache } from '../queries.js';
 
 describe('searchTransactions', () => {
   it('applies limit when provided', () => {
@@ -121,5 +122,15 @@ describe('getAllCategories', () => {
     mockAll.mockReturnValue([]);
     const result = getAllCategories();
     expect(result).toEqual([]);
+  });
+});
+
+describe('invalidateCache', () => {
+  it('exports without throwing', () => {
+    expect(() => invalidateCache()).not.toThrow();
+  });
+
+  it('can invalidate a specific key without throwing', () => {
+    expect(() => invalidateCache('currentMonthTxns')).not.toThrow();
   });
 });

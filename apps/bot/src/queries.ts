@@ -10,6 +10,7 @@ import {
   credentials,
 } from '@finance-bot/db/schema';
 import { currentMonthRange } from '@finance-bot/utils/dates';
+import type { Budget, Transaction } from '@finance-bot/types';
 
 export interface AccountWithBank {
   accountNumber: string;
@@ -17,16 +18,46 @@ export interface AccountWithBank {
   displayName: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// TTL cache
+// ---------------------------------------------------------------------------
+
+interface CacheEntry<T> { data: T; expiresAt: number; }
+const _cache = new Map<string, CacheEntry<unknown>>();
+
+function cached<T>(key: string, ttlMs: number, fn: () => T): T {
+  const entry = _cache.get(key) as CacheEntry<T> | undefined;
+  if (entry && Date.now() < entry.expiresAt) return entry.data;
+  const data = fn();
+  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  return data;
+}
+
+/** Clear one cache key or the entire cache. Call after a scrape run. */
+export function invalidateCache(key?: string): void {
+  if (key !== undefined) {
+    _cache.delete(key);
+  } else {
+    _cache.clear();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------
+
 export function getAllAccountsWithBank(): AccountWithBank[] {
-  return db
-    .select({
-      accountNumber: accounts.accountNumber,
-      balance: accounts.balance,
-      displayName: credentials.displayName,
-    })
-    .from(accounts)
-    .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
-    .all();
+  return cached('allAccountsWithBank', 30_000, () =>
+    db
+      .select({
+        accountNumber: accounts.accountNumber,
+        balance: accounts.balance,
+        displayName: credentials.displayName,
+      })
+      .from(accounts)
+      .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
+      .all()
+  );
 }
 
 export function getRecentTransactions(limit = 10) {
@@ -39,24 +70,30 @@ export function getRecentTransactions(limit = 10) {
 }
 
 export function getCurrentMonthTransactions() {
-  const { start, end } = currentMonthRange();
-  return db
-    .select()
-    .from(transactions)
-    .where(and(gte(transactions.date, start), lte(transactions.date, end)))
-    .all();
+  return cached('currentMonthTxns', 60_000, () => {
+    const { start, end } = currentMonthRange();
+    return db
+      .select()
+      .from(transactions)
+      .where(and(gte(transactions.date, start), lte(transactions.date, end)))
+      .all();
+  });
 }
 
 export function getActiveBudgets() {
-  return db
-    .select()
-    .from(budgets)
-    .where(eq(budgets.isActive, true))
-    .all();
+  return cached('activeBudgets', 120_000, () =>
+    db
+      .select()
+      .from(budgets)
+      .where(eq(budgets.isActive, true))
+      .all()
+  );
 }
 
 export function getAllUsers() {
-  return db.select().from(allowedUsers).all();
+  return cached('allUsers', 300_000, () =>
+    db.select().from(allowedUsers).all()
+  );
 }
 
 export function getLatestScrapeLog() {
@@ -92,16 +129,23 @@ export function getTransactionCount(): number {
   return result?.count ?? 0;
 }
 
-export function getBudgetAlertCount(): number {
-  const budgets = getActiveBudgets();
-  const txns = getCurrentMonthTransactions();
+/**
+ * @param activeBudgets - Pass pre-fetched budgets to avoid re-querying (optional)
+ * @param monthTxns - Pass pre-fetched transactions to avoid re-querying (optional)
+ */
+export function getBudgetAlertCount(
+  activeBudgets?: Budget[],
+  monthTxns?: Transaction[],
+): number {
+  const budgetList = activeBudgets ?? getActiveBudgets();
+  const txns = monthTxns ?? getCurrentMonthTransactions();
   const spending: Record<string, number> = {};
   txns.forEach((t) => {
     if (t.category) {
       spending[t.category] = (spending[t.category] ?? 0) + t.amount;
     }
   });
-  return budgets.filter((b) => {
+  return budgetList.filter((b) => {
     const spent = spending[b.categoryName] ?? 0;
     const threshold = b.alertThreshold ?? 0.8;
     return b.monthlyLimit > 0 && spent / b.monthlyLimit >= threshold;
@@ -109,8 +153,13 @@ export function getBudgetAlertCount(): number {
 }
 
 export function getTotalBalance(): number {
-  const accounts = getAllAccountsWithBank();
-  return accounts.reduce((sum, a) => sum + a.balance, 0);
+  return cached('totalBalance', 30_000, () => {
+    const result = db
+      .select({ total: sql<number>`coalesce(sum(${accounts.balance}), 0)` })
+      .from(accounts)
+      .get();
+    return result?.total ?? 0;
+  });
 }
 
 export function searchTransactions(options: {
@@ -155,19 +204,21 @@ export function searchTransactions(options: {
 }
 
 export function getAllCategories() {
-  const categories = db
+  const rows = db
     .selectDistinct({ category: transactions.category })
     .from(transactions)
     .where(sql`${transactions.category} IS NOT NULL`)
     .all();
-  return categories.map((c) => c.category).filter(Boolean) as string[];
+  return rows.map((c) => c.category).filter(Boolean) as string[];
 }
 
 export function getBudgetCategories() {
-  const result = db
-    .select({ categoryName: budgets.categoryName })
-    .from(budgets)
-    .where(eq(budgets.isActive, true))
-    .all();
-  return result.map((r) => r.categoryName);
+  return cached('budgetCategories', 300_000, () => {
+    const result = db
+      .select({ categoryName: budgets.categoryName })
+      .from(budgets)
+      .where(eq(budgets.isActive, true))
+      .all();
+    return result.map((r) => r.categoryName);
+  });
 }
