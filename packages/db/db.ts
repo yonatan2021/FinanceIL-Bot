@@ -2,6 +2,7 @@ import Database from 'better-sqlite3-multiple-ciphers';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema.js';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // ENCRYPTION NOTE: ENCRYPTION_KEY serves two distinct purposes:
@@ -13,9 +14,25 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL env var is required');
 }
 
+// Walk up from __dirname until we find the root package.json with "workspaces".
+// This works regardless of whether the code runs from source (packages/db/) or
+// compiled output (packages/db/dist/), so DATABASE_URL relative paths always
+// resolve to the monorepo root.
+function findMonorepoRoot(dir: string): string {
+  const pkgPath = path.join(dir, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as { workspaces?: unknown };
+      if (pkg.workspaces) return dir;
+    } catch { /* continue walking */ }
+  }
+  const parent = path.dirname(dir);
+  if (parent === dir) throw new Error('Could not find monorepo root');
+  return findMonorepoRoot(parent);
+}
+
 const rawPath = process.env.DATABASE_URL.replace(/^file:/, '');
-// db.ts is at packages/db/ — two levels below the monorepo root
-const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const monorepoRoot = findMonorepoRoot(path.dirname(fileURLToPath(import.meta.url)));
 const dbPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(monorepoRoot, rawPath);
 const sqlite = new Database(dbPath);
 
