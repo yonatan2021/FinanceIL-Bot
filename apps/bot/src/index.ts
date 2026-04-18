@@ -5,6 +5,9 @@ config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env')
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import type { ScheduledTask } from 'node-cron';
+import { eq, and } from 'drizzle-orm';
+import { db } from '@finance-bot/db';
+import { allowedUsers } from '@finance-bot/db/schema';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -75,14 +78,40 @@ const shutdown = async (): Promise<void> => {
 process.once('SIGINT', () => void shutdown());
 process.once('SIGTERM', () => void shutdown());
 
-await bot.api.setMyCommands([
+const standardCommands = [
   { command: 'start', description: 'פתח את התפריט הראשי' },
   { command: 'menu', description: 'תפריט ראשי' },
   { command: 'help', description: 'רשימת כל הפקודות' },
   { command: 'status', description: 'Dashboard מהיר' },
   { command: 'recent', description: '5 עסקאות אחרונות' },
-]);
-logger.info({ action: 'commands_registered' });
+] as const;
+
+const adminCommands = [
+  ...standardCommands,
+  { command: 'admin', description: '⚙️ פאנל ניהול (אדמין בלבד)' },
+] as const;
+
+// Set default scope for all users
+await bot.api.setMyCommands(standardCommands, { scope: { type: 'default' } });
+
+// Set scoped commands for each admin
+try {
+  const admins = db.select({ telegramId: allowedUsers.telegramId })
+    .from(allowedUsers)
+    .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
+    .all();
+
+  for (const admin of admins) {
+    await bot.api.setMyCommands(
+      adminCommands,
+      { scope: { type: 'chat', chat_id: Number(admin.telegramId) } },
+    );
+  }
+
+  logger.info({ action: 'commands_registered', adminCount: admins.length });
+} catch (err) {
+  logger.error({ action: 'admin_commands_failed', errorCode: (err as NodeJS.ErrnoException).code });
+}
 
 bot.start();
 logger.info({ action: 'polling_started' });
