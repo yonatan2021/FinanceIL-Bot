@@ -72,7 +72,7 @@ export function KpiCard({
             )}
           </div>
           <div className={cn("p-2.5 rounded-xl shrink-0", styles.iconContainer)}>
-            <Icon className={cn("h-5 w-5", styles.icon)} aria-hidden="true" />
+            <Icon className={cn("h-5 w-5", styles.icon)} />
           </div>
         </div>
       </CardContent>
