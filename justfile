@@ -18,7 +18,7 @@ setup:
 
 # Start all dev servers in parallel via turbo
 dev:
-	npx turbo run dev --parallel
+	npx turbo run dev
 
 # Start web dashboard only
 dev-web:
@@ -46,6 +46,11 @@ db-generate:
 
 # Apply pending database migrations
 db-migrate:
+	npm run db:migrate
+
+# Delete data.db and re-create it encrypted (run after changing ENCRYPTION_KEY or first setup)
+db-reset-dev:
+	rm -f data.db
 	npm run db:migrate
 
 # TypeScript check across all packages
