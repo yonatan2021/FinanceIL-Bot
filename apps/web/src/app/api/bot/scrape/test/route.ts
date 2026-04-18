@@ -4,6 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { BANKS } from "@/lib/banks";
+import { z } from "zod";
+
+const BodySchema = z.object({
+  bankId: z.string().min(1),
+  loginData: z.record(z.string(), z.string()),
+});
 
 // TODO: wire to actual israeli-bank-scrapers dry run
 
@@ -34,10 +40,6 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-interface RequestBody {
-  bankId: string;
-  loginData: Record<string, string>;
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -50,7 +52,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!checkRateLimit(userId)) {
     return NextResponse.json(
       { success: false, error: "יותר מדי ניסיונות. נסה שוב עוד שעה.", code: "RATE_LIMITED" },
-      { status: 429 }
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "3600",
+          // NOTE: in-memory rate limiter resets on server restart — replace with DB/Redis for v1.0.0 multi-user
+        },
+      },
     );
   }
 
@@ -61,10 +69,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: "גוף הבקשה אינו תקין", code: "INVALID_BODY" }, { status: 400 });
   }
 
-  const { bankId, loginData } = body as RequestBody;
+  const parsed = BodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, error: "נתונים לא תקינים", code: "INVALID_PARAMS" },
+      { status: 400 },
+    );
+  }
+  const { bankId, loginData } = parsed.data;
 
   // Validate bankId is a known bank
-  if (!bankId || !(bankId in BANKS)) {
+  if (!(bankId in BANKS)) {
     return NextResponse.json(
       { success: false, error: "מזהה בנק אינו תקין", code: "INVALID_BANK_ID" },
       { status: 400 }
@@ -85,9 +100,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // Mock success response — real scraper dry-run not yet wired
-  return NextResponse.json({
-    success: true,
-    data: { ok: true, accountsFound: 2 },
-  });
+  // Real scraper dry-run not yet wired — do not return fake success
+  return NextResponse.json(
+    {
+      success: false,
+      error: "בדיקת חיבור אינה זמינה עדיין. ניתן לדלג ולהמשיך.",
+      code: "NOT_IMPLEMENTED",
+    },
+    { status: 503 },
+  );
 }
