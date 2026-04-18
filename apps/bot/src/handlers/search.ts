@@ -46,19 +46,24 @@ searchHandlers.callbackQuery('menu:export', async (ctx) => {
   );
 });
 
-function generateCSV(transactions: Transaction[]): string {
+export function csvEscape(value: string): string {
+  // Prevent formula injection: prefix with single quote
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  // Escape embedded double quotes (RFC 4180)
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+export function generateCSV(txnList: Transaction[]): string {
   const headers = ['תאריך', 'תיאור', 'סכום', 'קטגוריה'];
-  const rows = transactions.map((t) => [
+  const rows = txnList.map((t) => [
     formatDateHE(new Date(t.date)),
-    `"${t.description}"`,
+    csvEscape(t.description),
     t.amount.toString(),
-    t.category || 'ללא קטגוריה',
+    csvEscape(t.category ?? 'ללא קטגוריה'),
   ]);
 
-  const csv = [
+  return [
     headers.join(','),
     ...rows.map((row) => row.join(',')),
   ].join('\n');
-
-  return csv;
 }
