@@ -71,3 +71,26 @@ export const scrapeLogs = sqliteTable('scrape_logs', {
   status: text('status').notNull(), // success / error / partial
   errorMessage: text('error_message'),
 });
+
+// Scheduler job state — 3 rows, one per cron job
+export const schedulerState = sqliteTable('scheduler_state', {
+  jobName: text('job_name').primaryKey(),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
+  cronExpression: text('cron_expression').notNull(),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  lastStatus: text('last_status'), // 'success' | 'error' | null
+  lastError: text('last_error'),
+  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+});
+
+// Bot heartbeat — single row, updated every 30s by bot
+export const botHeartbeat = sqliteTable('bot_heartbeat', {
+  id: integer('id').primaryKey().default(1),
+  lastBeatAt: integer('last_beat_at', { mode: 'timestamp' }),
+  pid: integer('pid'),
+  memoryMb: integer('memory_mb'),
+  uptimeSec: integer('uptime_sec'),
+  lastError: text('last_error'),
+  lastErrorAt: integer('last_error_at', { mode: 'timestamp' }),
+});

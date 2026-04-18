@@ -8,6 +8,13 @@
       "when": 1776369472088,
       "tag": "0000_lively_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776529554745,
+      "tag": "0001_superb_plazm",
+      "breakpoints": true
     }
   ]
 }

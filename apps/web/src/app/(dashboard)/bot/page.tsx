@@ -22,8 +22,20 @@ interface ScrapeLog {
   bankName?: string | null;
 }
 
+interface BotHealthData {
+  id: number;
+  lastBeatAt: string | null;
+  pid: number | null;
+  memoryMb: number | null;
+  uptimeSec: number | null;
+  lastError: string | null;
+  lastErrorAt: string | null;
+  status: 'online' | 'stale';
+}
+
 export default function BotOverviewPage() {
   const [status, setStatus] = useState<BotStatus | null>(null);
+  const [health, setHealth] = useState<BotHealthData | null | undefined>(undefined);
   const [recentLogs, setRecentLogs] = useState<ScrapeLog[]>([]);
   const [scrapeLoading, setScrapeLoading] = useState(false);
 
@@ -33,6 +45,20 @@ export default function BotOverviewPage() {
       setStatus((await res.json()) as BotStatus);
     } catch {
       setStatus({ ok: false, error: "שגיאת רשת" });
+    }
+  }, []);
+
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/bot/health");
+      if (!res.ok) {
+        setHealth(null);
+        return;
+      }
+      const data = (await res.json()) as { success: boolean; data: BotHealthData | null };
+      setHealth(data.data);
+    } catch {
+      setHealth(null);
     }
   }, []);
 
@@ -52,10 +78,14 @@ export default function BotOverviewPage() {
 
   useEffect(() => {
     void fetchStatus();
+    void fetchHealth();
     void fetchRecentLogs();
-    const interval = setInterval(() => void fetchStatus(), 30_000);
+    const interval = setInterval(() => {
+      void fetchStatus();
+      void fetchHealth();
+    }, 30_000);
     return () => clearInterval(interval);
-  }, [fetchStatus, fetchRecentLogs]);
+  }, [fetchStatus, fetchHealth, fetchRecentLogs]);
 
   const handleScrape = async () => {
     setScrapeLoading(true);
@@ -107,15 +137,27 @@ export default function BotOverviewPage() {
             </Badge>
           )}
 
-          {/* Health/next run placeholder */}
+          {/* Health status from heartbeat */}
           <div className="grid grid-cols-2 gap-4 pt-1 text-sm text-muted-foreground">
             <div>
-              <span className="block text-xs uppercase tracking-wide mb-0.5">בריאות מערכת</span>
-              <span>—</span>
+              <span className="block text-xs uppercase tracking-wide mb-0.5">חיבור בוט</span>
+              {health === undefined ? (
+                <span>...</span>
+              ) : health === null ? (
+                <Badge variant="outline">לא מחובר</Badge>
+              ) : health.status === 'online' ? (
+                <Badge className="bg-green-600 hover:bg-green-600 text-white">בוט מחובר</Badge>
+              ) : (
+                <Badge variant="destructive">בוט לא מחובר</Badge>
+              )}
             </div>
             <div>
-              <span className="block text-xs uppercase tracking-wide mb-0.5">ריצה הבאה</span>
-              <span>—</span>
+              <span className="block text-xs uppercase tracking-wide mb-0.5">פעימה אחרונה</span>
+              <span>
+                {health?.lastBeatAt
+                  ? new Date(health.lastBeatAt).toLocaleTimeString('he-IL')
+                  : '—'}
+              </span>
             </div>
           </div>
         </section>

@@ -58,3 +58,24 @@ export interface ScrapeLog {
   status: string;
   errorMessage: string | null;
 }
+
+export interface SchedulerJob {
+  jobName: string;
+  enabled: boolean;
+  cronExpression: string;
+  lastRunAt: Date | null;
+  lastStatus: string | null;
+  lastError: string | null;
+  nextRunAt: Date | null;
+  updatedAt: Date | null;
+}
+
+export interface BotHeartbeat {
+  id: number;
+  lastBeatAt: Date | null;
+  pid: number | null;
+  memoryMb: number | null;
+  uptimeSec: number | null;
+  lastError: string | null;
+  lastErrorAt: Date | null;
+}
