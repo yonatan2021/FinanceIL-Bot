@@ -46,4 +46,12 @@ jobs:
         run: npm run test --workspaces --if-present
 
       - name: Build
+        env:
+          DATABASE_URL: file:/tmp/data.db
+          AUTH_DB_URL: file:/tmp/auth.db
+          AUTH_SECRET: build-placeholder
+          DASHBOARD_PASSWORD: test
+          ENCRYPTION_KEY: "00000000000000000000000000000000"
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
         run: npm run build --workspace=apps/web
+
