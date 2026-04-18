@@ -50,8 +50,20 @@ db-migrate:
 
 # Delete data.db and re-create it encrypted (run after changing ENCRYPTION_KEY or first setup)
 db-reset-dev:
-	rm -f data.db
-	npm run db:migrate
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if [ -f data.db ]; then
+		mv data.db data.db.bak
+		echo "→ data.db backed up to data.db.bak"
+	fi
+	if npm run db:migrate; then
+		rm -f data.db.bak
+		echo "→ Migration succeeded, backup removed"
+	else
+		echo "ERROR: Migration failed. Restoring data.db." >&2
+		[ -f data.db.bak ] && mv data.db.bak data.db
+		exit 1
+	fi
 
 # TypeScript check across all packages
 typecheck:
