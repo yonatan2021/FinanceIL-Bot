@@ -24,6 +24,8 @@
 12. [AI Assistant Architecture](#12--ai-assistant-architecture-v060)
 13. [Open Questions](#-open-questions)
 
+> **Note:** TOC links use emoji anchors — if a link doesn't jump correctly, navigate to the section manually.
+
 ---
 
 ## 1. 🗂️ Monorepo & File Structure
@@ -205,6 +207,8 @@ HTTP Request from Bot
 ---
 
 ## 3. 🔐 Bridge Layer
+
+> **⚠️ Status: Planned — v0.2.0.** This section describes the *intended* architecture. `apps/bridge/` does not exist yet. Do not write code for this layer until v0.2.0 development begins.
 
 **תפקיד:** שומר הסף היחיד בין הbot לבנקים. כל scraping עובר כאן. אף אחד אחר לא מתקשר עם הscraper.
 
