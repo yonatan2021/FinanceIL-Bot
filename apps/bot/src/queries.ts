@@ -1,4 +1,5 @@
-import { eq, and, desc, gte, lte, sql, like, or } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, like } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
 import {
   allowedUsers,
@@ -121,7 +122,7 @@ export function searchTransactions(options: {
   endDate?: Date;
   limit?: number;
 }) {
-  const conditions: any[] = [];
+  const conditions: SQL[] = [];
 
   if (options.keyword) {
     conditions.push(like(transactions.description, `%${options.keyword}%`));
@@ -142,17 +143,15 @@ export function searchTransactions(options: {
     conditions.push(lte(transactions.date, options.endDate));
   }
 
-  const query = db
+  const baseQuery = db
     .select()
     .from(transactions)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(transactions.date));
 
-  if (options.limit) {
-    query.limit(options.limit);
-  }
-
-  return query.all();
+  return options.limit !== undefined
+    ? baseQuery.limit(options.limit).all()
+    : baseQuery.all();
 }
 
 export function getAllCategories() {
