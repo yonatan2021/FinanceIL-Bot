@@ -1,91 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-interface BotStatus {
-  ok: boolean;
-  botName?: string;
-  username?: string;
-  error?: string;
-}
-
-interface ScrapeLog {
-  id: string;
-  startedAt: string;
-  status: string;
-  transactionsFetched: number | null;
-  bankName?: string | null;
-}
-
-interface BotHealthData {
-  id: number;
-  lastBeatAt: string | null;
-  pid: number | null;
-  memoryMb: number | null;
-  uptimeSec: number | null;
-  lastError: string | null;
-  lastErrorAt: string | null;
-  status: 'online' | 'stale';
-}
+import { useBotStatus } from "@/hooks/useBotStatus";
+import { useBotHealth } from "@/hooks/useBotHealth";
+import { useScrapeLogs } from "@/hooks/useScrapeLogs";
 
 export default function BotOverviewPage() {
-  const [status, setStatus] = useState<BotStatus | null>(null);
-  const [health, setHealth] = useState<BotHealthData | null | undefined>(undefined);
-  const [recentLogs, setRecentLogs] = useState<ScrapeLog[]>([]);
+  const { status } = useBotStatus();
+  const { health } = useBotHealth();
+  const { logs: recentLogs, mutate: mutateLogs } = useScrapeLogs(3);
   const [scrapeLoading, setScrapeLoading] = useState(false);
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/bot/status");
-      setStatus((await res.json()) as BotStatus);
-    } catch {
-      setStatus({ ok: false, error: "שגיאת רשת" });
-    }
-  }, []);
-
-  const fetchHealth = useCallback(async () => {
-    try {
-      const res = await fetch("/api/bot/health");
-      if (!res.ok) {
-        setHealth(null);
-        return;
-      }
-      const data = (await res.json()) as { success: boolean; data: BotHealthData | null };
-      setHealth(data.data);
-    } catch {
-      setHealth(null);
-    }
-  }, []);
-
-  const fetchRecentLogs = useCallback(async () => {
-    try {
-      const res = await fetch("/api/scrape-logs");
-      if (!res.ok) {
-        setRecentLogs([]);
-        return;
-      }
-      const data = (await res.json()) as { success: boolean; data?: ScrapeLog[] };
-      setRecentLogs((data.data ?? []).slice(0, 3));
-    } catch {
-      setRecentLogs([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchStatus();
-    void fetchHealth();
-    void fetchRecentLogs();
-    const interval = setInterval(() => {
-      void fetchStatus();
-      void fetchHealth();
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchStatus, fetchHealth, fetchRecentLogs]);
 
   const handleScrape = async () => {
     setScrapeLoading(true);
@@ -94,7 +23,7 @@ export default function BotOverviewPage() {
       const data = (await res.json()) as { success: boolean; error?: string };
       if (data.success) {
         toast.success("הסקרייפר הסתיים בהצלחה");
-        void fetchRecentLogs();
+        void mutateLogs();
       } else {
         toast.error(`שגיאה: ${data.error ?? "לא ידוע"}`);
       }

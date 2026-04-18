@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,46 +20,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-interface UserRow {
-  id: string;
-  name: string | null;
-  telegramId: string;
-  role: string;
-  isActive: boolean | null;
-}
+import { useAllowedUsers } from "@/hooks/useAllowedUsers";
+import type { AllowedUser } from "@/hooks/useAllowedUsers";
+import { useBroadcastStore } from "@/stores/useBroadcastStore";
 
 export default function BotMessagesPage() {
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [broadcastMsg, setBroadcastMsg] = useState("");
-  const [broadcastTarget, setBroadcastTarget] = useState<"all" | "admins">("all");
+  const { users } = useAllowedUsers();
+  const { draftMessage, target, setDraftMessage, setTarget, clear } = useBroadcastStore();
   const [loading, setLoading] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AllowedUser | null>(null);
   const [directMsg, setDirectMsg] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await fetch("/api/users");
-      const data = (await res.json()) as { data?: UserRow[] };
-      setUsers(data.data ?? []);
-    } catch {
-      setUsers([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchUsers();
-  }, [fetchUsers]);
-
   const handleBroadcast = async () => {
-    if (!broadcastMsg.trim()) return;
+    if (!draftMessage.trim()) return;
     setLoading(true);
     try {
       const res = await fetch("/api/bot/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: broadcastMsg, target: broadcastTarget }),
+        body: JSON.stringify({ message: draftMessage, target }),
       });
       const data = (await res.json()) as {
         success: boolean;
@@ -69,7 +49,7 @@ export default function BotMessagesPage() {
       };
       if (data.success) {
         toast.success(`נשלח ל-${data.sent ?? 0} משתמשים (${data.failed ?? 0} נכשלו)`);
-        setBroadcastMsg("");
+        clear();
       } else {
         toast.error(data.error ?? "שגיאה לא ידועה");
       }
@@ -115,8 +95,8 @@ export default function BotMessagesPage() {
             <Label htmlFor="broadcast-target">קהל יעד</Label>
             <select
               id="broadcast-target"
-              value={broadcastTarget}
-              onChange={(e) => setBroadcastTarget(e.target.value as "all" | "admins")}
+              value={target}
+              onChange={(e) => setTarget(e.target.value as "all" | "admins")}
               className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               <option value="all">כל המשתמשים הפעילים</option>
@@ -127,8 +107,8 @@ export default function BotMessagesPage() {
             <Label htmlFor="broadcast-message">הודעה</Label>
             <textarea
               id="broadcast-message"
-              value={broadcastMsg}
-              onChange={(e) => setBroadcastMsg(e.target.value)}
+              value={draftMessage}
+              onChange={(e) => setDraftMessage(e.target.value)}
               placeholder="הודעה לשליחה..."
               rows={4}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -136,7 +116,7 @@ export default function BotMessagesPage() {
           </div>
           <Button
             onClick={() => void handleBroadcast()}
-            disabled={!broadcastMsg.trim() || loading}
+            disabled={!draftMessage.trim() || loading}
             className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             שלח הודעה

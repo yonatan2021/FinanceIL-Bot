@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Switch } from "@/components/ui/switch";
 import { TableSkeleton } from "@/components/ui/page-skeleton";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import type { SchedulerJob } from "@finance-bot/types";
+import { useScheduler, updateSchedulerJob } from "@/hooks/useScheduler";
 
 const JOB_NAME_HE: Record<string, string> = {
   'daily-budget-alerts': 'התראות תקציב יומיות',
@@ -41,52 +42,24 @@ function StatusPill({ status }: { status: string | null }) {
 }
 
 export default function SchedulerPage() {
-  const [jobs, setJobs] = useState<SchedulerJob[] | null>(null);
+  const { jobs, mutate } = useScheduler();
   const [toggling, setToggling] = useState<Set<string>>(new Set());
-
-  const fetchJobs = useCallback(async () => {
-    try {
-      const res = await fetch('/api/bot/scheduler');
-      if (!res.ok) {
-        toast.error('שגיאה בטעינת המתזמן');
-        return;
-      }
-      const data = (await res.json()) as { success: boolean; data?: SchedulerJob[] };
-      setJobs(data.data ?? []);
-    } catch {
-      toast.error('שגיאת רשת');
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchJobs();
-  }, [fetchJobs]);
 
   const handleToggle = async (jobName: string, currentEnabled: boolean) => {
     setToggling((prev) => new Set(prev).add(jobName));
     try {
-      const res = await fetch(`/api/bot/scheduler/${encodeURIComponent(jobName)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !currentEnabled }),
-      });
-      if (!res.ok) {
-        toast.error('שגיאה בעדכון המשרה');
-        return;
-      }
-      const data = (await res.json()) as { success: boolean; data?: SchedulerJob };
-      if (data.success && data.data) {
-        setJobs((prev) =>
-          prev === null
-            ? null
-            : prev.map((j) => (j.jobName === jobName ? { ...j, enabled: data.data!.enabled } : j)),
-        );
-        toast.success('עודכן');
-      } else {
-        toast.error('שגיאה בעדכון המשרה');
-      }
-    } catch {
-      toast.error('שגיאת רשת');
+      const updatedJob = await updateSchedulerJob(jobName, !currentEnabled);
+      await mutate((prev) =>
+        prev === undefined
+          ? undefined
+          : prev.map((j): SchedulerJob =>
+              j.jobName === jobName ? { ...j, enabled: updatedJob.enabled } : j
+            ),
+        { revalidate: false }
+      );
+      toast.success('עודכן');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'שגיאה בעדכון המשרה');
     } finally {
       setToggling((prev) => {
         const next = new Set(prev);
