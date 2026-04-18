@@ -42,7 +42,7 @@ function StatusPill({ status }: { status: string | null }) {
 }
 
 export default function SchedulerPage() {
-  const { jobs, mutate } = useScheduler();
+  const { jobs, error, mutate } = useScheduler();
   const [toggling, setToggling] = useState<Set<string>>(new Set());
 
   const handleToggle = async (jobName: string, currentEnabled: boolean) => {
@@ -73,7 +73,17 @@ export default function SchedulerPage() {
     <div>
       <TopBar title="מתזמן" />
       <div className="p-6">
-        {jobs === null ? (
+        {error ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive text-sm">
+            שגיאה בטעינת הנתונים.{" "}
+            <button
+              onClick={() => void mutate()}
+              className="underline focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded"
+            >
+              נסה שוב
+            </button>
+          </div>
+        ) : jobs === null ? (
           <TableSkeleton rows={3} cols={6} />
         ) : (
           <div className="rounded-md border bg-white">

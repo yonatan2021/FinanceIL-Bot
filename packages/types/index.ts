@@ -79,3 +79,21 @@ export interface BotHeartbeat {
   lastError: string | null;
   lastErrorAt: Date | null;
 }
+
+export interface CommandUsage {
+  id: number;
+  telegramId: string;
+  command: string;
+  timestamp: Date;
+  success: boolean | null;
+  durationMs: number | null;
+}
+
+export interface CategoryRule {
+  id: number;
+  categoryName: string;
+  pattern: string;
+  priority: number;
+  isActive: boolean;
+  createdAt: Date;
+}
