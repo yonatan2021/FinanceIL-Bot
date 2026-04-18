@@ -19,7 +19,8 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
   await ctx.editMessageText('🔄 מפעיל סקרייפר...', { reply_markup: adminMenuKeyboard() });
 
   try {
-    const res = await fetch('http://web:3000/api/scrape', {
+    const webUrl = process.env.WEB_INTERNAL_URL ?? 'http://web:5200';
+    const res = await fetch(`${webUrl}/api/scrape`, {
       method: 'POST',
       headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '' },
     });

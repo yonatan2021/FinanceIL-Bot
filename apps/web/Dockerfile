@@ -62,8 +62,8 @@ COPY --from=base /app/package.json ./package.json
 
 USER nextjs
 
-EXPOSE 3000
-ENV PORT=3000
+EXPOSE 5200
+ENV PORT=5200
 ENV HOSTNAME="0.0.0.0"
 
 WORKDIR /app/apps/web

@@ -120,7 +120,7 @@ npm run dev
 ```
 
 זה יתחיל:
-- **Web**: http://localhost:3000
+- **Web**: http://localhost:5200
 - **Bot**: Polling mode (connects to Telegram)
 
 ### Option B: Start just web
@@ -142,7 +142,7 @@ npm run dev
 ## 6️⃣ Test it
 
 ### Web Dashboard
-1. Go to http://localhost:3000
+1. Go to http://localhost:5200
 2. Should see dashboard (might be empty)
 3. Check browser console for errors
 
@@ -176,10 +176,10 @@ Steps:
 4. Try: curl https://api.telegram.org/bot{TOKEN}/getMe
 ```
 
-### Issue: Port 3000 already in use
+### Issue: Port 5200 already in use
 ```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
+# Kill process on port 5200
+lsof -ti:5200 | xargs kill -9
 # Or change port in next.config.ts
 ```
 
@@ -206,7 +206,7 @@ finance/
 ├── .env.local              ← Your local config (NEVER commit!)
 ├── .next/                  ← Next.js build cache
 ├── apps/
-│   ├── web/                ← Dashboard running on :3000
+│   ├── web/                ← Dashboard running on :5200
 │   │   └── src/app/...     ← Routes, components
 │   └── bot/                ← Telegram Bot
 │       └── src/...         ← Handlers, commands

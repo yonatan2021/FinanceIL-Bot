@@ -72,7 +72,7 @@ npm run db:generate  # אם יש שינויים בschema
 npm run db:migrate   # הפעל migrations
 
 # 4. Start dev
-npm run dev          # http://localhost:3000 + bot
+npm run dev          # http://localhost:5200 + bot
 ```
 
 **נדרש:**

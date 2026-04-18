@@ -875,7 +875,7 @@ services:
   web:
     build: ./apps/web
     env_file: .env
-    ports: ["3000:3000"]
+    ports: ["5200:5200"]
     networks: [external]
     restart: unless-stopped
 
@@ -920,7 +920,7 @@ BRIDGE_URL=http://bridge:3001 # internal docker url — לא לשנות
 BRIDGE_PORT=3001
 
 # === Web Dashboard ===
-DASHBOARD_PORT=3000
+DASHBOARD_PORT=5200
 SESSION_SECRET=               # 32 chars random — openssl rand -hex 16
 # v1.0.0: JWT_SECRET, REFRESH_TOKEN_SECRET
 

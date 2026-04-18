@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const heebo = Heebo({
@@ -21,7 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
-      <body className="min-h-screen bg-slate-50">{children}</body>
+      <body className="min-h-screen bg-slate-50">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

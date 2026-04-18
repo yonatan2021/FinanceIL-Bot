@@ -95,7 +95,7 @@ npx @better-auth/cli migrate
 
 This only needs to run once. After the first successful start, `ensureAdminUser` handles the rest automatically on every restart.
 
-Dashboard זמין ב: `http://localhost:3000`  
+Dashboard זמין ב: `http://localhost:5200`  
 Bot: מגיב ל-Telegram לאחר הגדרת `BOT_TOKEN` ב-`.env`
 
 ### Development (ללא Docker)

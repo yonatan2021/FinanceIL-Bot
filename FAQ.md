@@ -18,11 +18,11 @@
 
 ---
 
-### **Q: Port 3000 כבר תפוס**
+### **Q: Port 5200 כבר תפוס**
 
 **A:** Kill process:
 ```bash
-lsof -ti:3000 | xargs kill -9
+lsof -ti:5200 | xargs kill -9
 npm run dev
 ```
 
@@ -168,7 +168,7 @@ docker compose --profile scraper up scraper
 **A:** בדוק:
 
 1. `npm run dev` — running?
-2. http://localhost:3000 — נגישה?
+2. http://localhost:5200 — נגישה?
 3. Browser console — errors?
 4. Network tab — API calls failing?
 
