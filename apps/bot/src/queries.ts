@@ -114,20 +114,32 @@ export function getTransactionCount(): number {
   return result?.count ?? 0;
 }
 
-export function getBudgetAlertCount(): number {
-  const budgets = getActiveBudgets();
-  const txns = getCurrentMonthTransactions(); // capped at 2_000 — see DEFAULT in function signature
+function aggregateSpending(txns: { category: string | null; amount: number }[]): Record<string, number> {
   const spending: Record<string, number> = {};
-  txns.forEach((t) => {
+  for (const t of txns) {
     if (t.category) {
       spending[t.category] = (spending[t.category] ?? 0) + t.amount;
     }
-  });
-  return budgetList.filter((b) => {
+  }
+  return spending;
+}
+
+export function computeBudgetAlertCount(
+  activeBudgets: { categoryName: string; monthlyLimit: number; alertThreshold: number | null }[],
+  spending: Record<string, number>,
+): number {
+  return activeBudgets.filter((b) => {
     const spent = spending[b.categoryName] ?? 0;
     const threshold = b.alertThreshold ?? 0.8;
     return b.monthlyLimit > 0 && spent / b.monthlyLimit >= threshold;
   }).length;
+}
+
+export function getBudgetAlertCount(): number {
+  const activeBudgets = getActiveBudgets();
+  const txns = getCurrentMonthTransactions();
+  const spending = aggregateSpending(txns);
+  return computeBudgetAlertCount(activeBudgets, spending);
 }
 
 export function getTotalBalance(): number {
