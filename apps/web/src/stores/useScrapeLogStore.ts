@@ -1,12 +1,10 @@
 import { create } from "zustand";
 
-export type ScrapeLogStatusFilter = 'all' | 'success' | 'error' | 'partial'
-
 interface ScrapeLogStore {
   selectedLogId: string | null;
-  statusFilter: ScrapeLogStatusFilter;
+  statusFilter: string;
   setSelectedLog: (id: string | null) => void;
-  setStatusFilter: (status: ScrapeLogStatusFilter) => void;
+  setStatusFilter: (status: string) => void;
 }
 
 export const useScrapeLogStore = create<ScrapeLogStore>()((set) => ({

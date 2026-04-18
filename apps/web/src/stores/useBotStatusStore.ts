@@ -1,10 +1,8 @@
 import { create } from "zustand";
 
-export type BotTab = 'overview' | 'scheduler' | 'logs' | 'activity' | 'users' | 'messages'
-
 interface BotStatusStore {
-  activeTab: BotTab;
-  setActiveTab: (tab: BotTab) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 export const useBotStatusStore = create<BotStatusStore>()((set) => ({

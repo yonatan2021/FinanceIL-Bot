@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher, ApiError } from "@/lib/fetcher";
+import { fetcher } from "@/lib/fetcher";
 
 export interface ScrapeLog {
   id: string;
@@ -14,11 +14,5 @@ export function useScrapeLogs(limit?: number) {
     ? `/api/scrape-logs?limit=${limit}`
     : "/api/scrape-logs";
   const { data, error, isLoading, mutate } = useSWR<ScrapeLog[]>(url, fetcher);
-  return {
-    logs: data ?? [],
-    isLoading,
-    isError: !!error,
-    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
-    mutate,
-  };
+  return { logs: data ?? [], error, isLoading, mutate };
 }

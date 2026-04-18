@@ -14,32 +14,37 @@ import { BankConnectWizard } from "@/components/features/banks/BankConnectWizard
 import { BankDeleteDialog } from "@/components/features/banks/BankDeleteDialog";
 import { BANKS } from "@/lib/banks";
 import { Plus, Trash2, Landmark } from "lucide-react";
+import { useCredentials } from "@/hooks/useCredentials";
+import type { SafeCredential } from "@/hooks/useCredentials";
 
-interface SafeCredential {
+// BankDeleteDialog expects lastScrapedAt: Date | null — adapter to satisfy its type
+type CredentialForDialog = {
   id: string;
   displayName: string;
   bankId: string;
   status: string | null;
   lastScrapedAt: Date | null;
+};
+
+function toDialogCredential(cred: SafeCredential): CredentialForDialog {
+  return {
+    ...cred,
+    lastScrapedAt: cred.lastScrapedAt ? new Date(cred.lastScrapedAt) : null,
+  };
 }
 
-interface Props {
-  initialCredentials: SafeCredential[];
-}
-
-export function BanksClient({ initialCredentials }: Props) {
-  const [creds, setCreds] = useState<SafeCredential[]>(initialCredentials);
+export function BanksClient() {
+  const { credentials: creds, mutate } = useCredentials();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SafeCredential | null>(null);
 
-  function handleWizardSuccess(newCred: SafeCredential) {
-    setCreds((prev) => [...prev, newCred]);
+  async function handleWizardSuccess() {
+    await mutate();
   }
 
-  function handleDeleteSuccess() {
-    if (!deleteTarget) return;
-    setCreds((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+  async function handleDeleteSuccess() {
     setDeleteTarget(null);
+    await mutate();
   }
 
   return (
@@ -117,7 +122,7 @@ export function BanksClient({ initialCredentials }: Props) {
       <BankConnectWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
-        onSuccess={handleWizardSuccess}
+        onSuccess={() => void handleWizardSuccess()}
       />
 
       {deleteTarget && (
@@ -126,8 +131,8 @@ export function BanksClient({ initialCredentials }: Props) {
           onOpenChange={(v) => {
             if (!v) setDeleteTarget(null);
           }}
-          credential={deleteTarget}
-          onSuccess={handleDeleteSuccess}
+          credential={toDialogCredential(deleteTarget)}
+          onSuccess={() => void handleDeleteSuccess()}
         />
       )}
     </div>
