@@ -27,6 +27,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .env.*
+!.env.example
 
 # Finance Bot specific
 ENCRYPTION_KEY
