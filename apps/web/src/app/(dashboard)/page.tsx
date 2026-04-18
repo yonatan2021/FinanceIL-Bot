@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -42,31 +44,37 @@ export default async function DashboardPage() {
       .leftJoin(credentials, sql`${accounts.credentialId} = ${credentials.id}`),
 
     db
-      .select()
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        description: transactions.description,
+        amount: transactions.amount,
+        category: transactions.category,
+      })
       .from(transactions)
       .orderBy(desc(transactions.date))
       .limit(8),
 
     db
       .select({
-        type: transactions.type,
         total: sql<number>`sum(${transactions.amount})`,
+        isExpense: sql<number>`cast(${transactions.amount} < 0 as integer)`,
       })
       .from(transactions)
       .where(
         sql`${transactions.date} >= ${monthStartTs} AND ${transactions.date} <= ${monthEndTs}`
       )
-      .groupBy(transactions.type),
+      .groupBy(sql`cast(${transactions.amount} < 0 as integer)`),
   ]);
 
   const totalBalance = allAccounts.reduce((s, a) => s + a.balance, 0);
 
   const totalExpenses = monthlySummary
-    .filter((r) => Number(r.total) < 0)
+    .filter((r) => r.isExpense === 1)
     .reduce((s, r) => s + Math.abs(Number(r.total)), 0);
 
   const totalIncome = monthlySummary
-    .filter((r) => Number(r.total) > 0)
+    .filter((r) => r.isExpense === 0)
     .reduce((s, r) => s + Number(r.total), 0);
 
   const netSavings = totalIncome - totalExpenses;
