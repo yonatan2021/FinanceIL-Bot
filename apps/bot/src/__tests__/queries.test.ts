@@ -67,7 +67,7 @@ describe('searchTransactions', () => {
 
   it('applies limit: 0 (undefined check, not falsy check)', () => {
     searchTransactions({ limit: 0 });
-    expect(mockLimit).toHaveBeenCalledWith(0);
+    expect(mockLimit).toHaveBeenCalledWith(1);
   });
 
   it('calls where when no filters provided', () => {

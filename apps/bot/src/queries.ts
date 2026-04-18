@@ -139,17 +139,9 @@ export function getTransactionCount(): number {
   return result?.count ?? 0;
 }
 
-/**
- * @param activeBudgets - Pre-fetched budgets. If provided, bypasses the cache
- *   entirely — ensure data is fresh before passing. Omit to use cached results.
- * @param monthTxns - Pre-fetched transactions. Same cache-bypass caveat as activeBudgets.
- */
-export function getBudgetAlertCount(
-  activeBudgets?: Budget[],
-  monthTxns?: Transaction[],
-): number {
-  const budgetList = activeBudgets ?? getActiveBudgets();
-  const txns = monthTxns ?? getCurrentMonthTransactions();
+export function getBudgetAlertCount(): number {
+  const budgets = getActiveBudgets();
+  const txns = getCurrentMonthTransactions(); // capped at 2_000 — see DEFAULT in function signature
   const spending: Record<string, number> = {};
   txns.forEach((t) => {
     if (t.category) {
@@ -185,7 +177,8 @@ export function searchTransactions(options: {
   const conditions: SQL[] = [];
 
   if (options.keyword) {
-    conditions.push(like(transactions.description, `%${options.keyword}%`));
+    const escapedKeyword = options.keyword.replace(/[%_\\]/g, '\\$&');
+    conditions.push(like(transactions.description, `%${escapedKeyword}%`));
   }
   if (options.category) {
     conditions.push(eq(transactions.category, options.category));
@@ -203,7 +196,7 @@ export function searchTransactions(options: {
     conditions.push(lte(transactions.date, options.endDate));
   }
 
-  const effectiveLimit = Math.min(options.limit ?? 500, 500);
+  const effectiveLimit = Math.max(1, Math.min(options.limit ?? 500, 500));
 
   return db
     .select()
