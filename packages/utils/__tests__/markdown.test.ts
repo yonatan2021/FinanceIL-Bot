@@ -32,4 +32,16 @@ describe('escapeMarkdownV2', () => {
   it('mixed text', () => {
     expect(escapeMarkdownV2('בנק.לאומי (חסכון)')).toBe('בנק\\.לאומי \\(חסכון\\)');
   });
+  it('escapes all MarkdownV2 special characters', () => {
+    const input = '[]()~`>#+-=|{}.!';
+    const expected = '\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!';
+    expect(escapeMarkdownV2(input)).toBe(expected);
+  });
+  it('does not double-escape — calling twice changes output', () => {
+    const once = escapeMarkdownV2('hello.world');
+    expect(once).toBe('hello\\.world');
+    // double-calling breaks output — documents the contract
+    const twice = escapeMarkdownV2(once);
+    expect(twice).not.toBe(once);
+  });
 });

@@ -80,7 +80,7 @@ beforeEach(() => {
   mockPrepare.mockReturnValue({ all: mockAll, get: mockGet });
 });
 
-import { searchTransactions, getBudgetCategories, getAllCategories, invalidateCache } from '../queries.js';
+import { searchTransactions, getBudgetCategories, getAllCategories, computeBudgetAlertCount } from '../queries.js';
 
 describe('searchTransactions', () => {
   it('applies limit when provided', () => {
@@ -154,77 +154,54 @@ describe('getAllCategories', () => {
   });
 });
 
-describe('invalidateCache', () => {
-  it('exports without throwing', () => {
-    expect(() => invalidateCache()).not.toThrow();
+describe('computeBudgetAlertCount', () => {
+  const budget = (overrides: Partial<{ categoryName: string; monthlyLimit: number; alertThreshold: number | null }> = {}) => ({
+    categoryName: 'מזון',
+    monthlyLimit: 1000,
+    alertThreshold: 0.8,
+    ...overrides,
   });
 
-  it('can invalidate a specific key without throwing', () => {
-    expect(() => invalidateCache('currentMonthTxns')).not.toThrow();
-  });
-});
-
-describe('TTL cache behavior', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+  it('returns 0 when no budgets', () => {
+    expect(computeBudgetAlertCount([], {})).toBe(0);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('returns 0 when spending is below threshold', () => {
+    const spending = { מזון: 700 };
+    expect(computeBudgetAlertCount([budget()], spending)).toBe(0);
   });
 
-  it('cache hit: calling getBudgetCategories twice only invokes DB once', () => {
-    mockAll.mockReturnValue([{ categoryName: 'מזון' }]);
-    getBudgetCategories();
-    getBudgetCategories();
-    // mockAll is called once inside the DB chain for the cached function
-    expect(mockAll).toHaveBeenCalledTimes(1);
+  it('returns 1 when spending exactly meets threshold (>=)', () => {
+    const spending = { מזון: 800 }; // 800/1000 = 0.8 exactly
+    expect(computeBudgetAlertCount([budget()], spending)).toBe(1);
   });
 
-  it('re-fetch after TTL elapses: next call re-invokes DB', () => {
-    mockAll.mockReturnValue([{ categoryName: 'מזון' }]);
-    getBudgetCategories(); // populates cache (TTL = 300_000 ms)
-    expect(mockAll).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(300_001); // advance past the 300s TTL
-
-    getBudgetCategories(); // cache expired — should hit DB again
-    expect(mockAll).toHaveBeenCalledTimes(2);
+  it('returns 1 when spending exceeds threshold', () => {
+    const spending = { מזון: 950 };
+    expect(computeBudgetAlertCount([budget()], spending)).toBe(1);
   });
 
-  it('invalidateCache() clears all entries so next call re-invokes DB', () => {
-    mockAll.mockReturnValue([{ categoryName: 'מזון' }]);
-    getBudgetCategories(); // caches 'budgetCategories'
-    expect(mockAll).toHaveBeenCalledTimes(1);
-
-    invalidateCache(); // clear entire cache
-
-    getBudgetCategories(); // must re-fetch
-    expect(mockAll).toHaveBeenCalledTimes(2);
+  it('defaults alertThreshold to 0.8 when null', () => {
+    const spending = { מזון: 800 };
+    expect(computeBudgetAlertCount([budget({ alertThreshold: null })], spending)).toBe(1);
   });
 
-  it('invalidateCache(key) clears only that key, leaving other keys intact', () => {
-    // Populate two cached functions
-    mockAll.mockReturnValue([{ categoryName: 'מזון' }]);
-    getBudgetCategories(); // caches 'budgetCategories'
+  it('skips budgets with monthlyLimit === 0 (division-by-zero guard)', () => {
+    const spending = { מזון: 999 };
+    expect(computeBudgetAlertCount([budget({ monthlyLimit: 0 })], spending)).toBe(0);
+  });
 
-    mockAll.mockReturnValue([{ category: 'תחבורה' }]);
-    getAllCategories(); // getAllCategories is not cached — but we use it to verify that
-                        // invalidating 'budgetCategories' does not affect subsequent
-                        // DB calls for other queries
+  it('counts categories with no transactions as 0 spending (no alert)', () => {
+    expect(computeBudgetAlertCount([budget()], {})).toBe(0);
+  });
 
-    const callsAfterPopulate = mockAll.mock.calls.length;
-
-    // Invalidate only 'budgetCategories'
-    invalidateCache('budgetCategories');
-
-    // getBudgetCategories must re-fetch
-    mockAll.mockReturnValue([{ categoryName: 'מזון' }]);
-    getBudgetCategories();
-    expect(mockAll).toHaveBeenCalledTimes(callsAfterPopulate + 1);
-
-    // Calling getBudgetCategories a second time should NOT hit DB again (re-cached)
-    getBudgetCategories();
-    expect(mockAll).toHaveBeenCalledTimes(callsAfterPopulate + 1);
+  it('counts multiple exceeded budgets correctly', () => {
+    const budgets = [
+      budget({ categoryName: 'מזון', monthlyLimit: 1000, alertThreshold: 0.8 }),
+      budget({ categoryName: 'בידור', monthlyLimit: 500, alertThreshold: 0.8 }),
+      budget({ categoryName: 'ביגוד', monthlyLimit: 200, alertThreshold: 0.8 }),
+    ];
+    const spending = { מזון: 900, בידור: 100, ביגוד: 190 }; // מזון + ביגוד exceeded
+    expect(computeBudgetAlertCount(budgets, spending)).toBe(2);
   });
 });
