@@ -38,10 +38,6 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  if ((session.user as { role?: string }).role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
-  }
-
   const { id: idStr } = await params;
   const id = parseId(idStr);
   if (id === null) {
@@ -98,10 +94,6 @@ export async function DELETE(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-
-  if ((session.user as { role?: string }).role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
   }
 
   const { id: idStr } = await params;
