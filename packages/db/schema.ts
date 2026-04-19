@@ -1,4 +1,4 @@
-import { sqliteTable, text, real, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, real, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 export const credentials = sqliteTable('credentials', {
   id: text('id').primaryKey(),
@@ -70,4 +70,50 @@ export const scrapeLogs = sqliteTable('scrape_logs', {
   transactionsFetched: integer('transactions_fetched').default(0),
   status: text('status').notNull(), // success / error / partial
   errorMessage: text('error_message'),
+});
+
+// Scheduler job state — 3 rows, one per cron job
+export const schedulerState = sqliteTable('scheduler_state', {
+  jobName: text('job_name').primaryKey(),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
+  cronExpression: text('cron_expression').notNull(),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  lastStatus: text('last_status'), // 'success' | 'error' | null
+  lastError: text('last_error'),
+  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+});
+
+// Bot heartbeat — single row, updated every 30s by bot
+export const botHeartbeat = sqliteTable('bot_heartbeat', {
+  id: integer('id').primaryKey().default(1),
+  lastBeatAt: integer('last_beat_at', { mode: 'timestamp' }),
+  pid: integer('pid'),
+  memoryMb: integer('memory_mb'),
+  uptimeSec: integer('uptime_sec'),
+  lastError: text('last_error'),
+  lastErrorAt: integer('last_error_at', { mode: 'timestamp' }),
+});
+
+// Command usage telemetry — fed by bot middleware (future)
+export const commandUsage = sqliteTable('command_usage', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  telegramId: text('telegram_id').notNull(),
+  command: text('command').notNull(),
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+  success: integer('success', { mode: 'boolean' }).default(true).notNull(),
+  durationMs: integer('duration_ms'),
+}, (table) => ({
+  idxTelegramTimestamp: index('idx_command_usage_telegram').on(table.telegramId, table.timestamp),
+  idxCommandTimestamp: index('idx_command_usage_command').on(table.command, table.timestamp),
+}));
+
+// Category auto-sort rules
+export const categoryRules = sqliteTable('category_rules', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  categoryName: text('category_name').notNull(),
+  pattern: text('pattern').notNull(),  // regex source string
+  priority: integer('priority').default(0).notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });

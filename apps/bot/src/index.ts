@@ -3,6 +3,8 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot } from 'grammy';
+import { autoRetry } from '@grammyjs/auto-retry';
+import type { ScheduledTask } from 'node-cron';
 import type { BotContext } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
@@ -10,15 +12,36 @@ import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
 import { startScheduler } from './scheduler.js';
+import { logger } from './lib/logger.js';
 
 const token = process.env.BOT_TOKEN;
 if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
+// Handle Telegram 429 and 5xx via @grammyjs/auto-retry (3 retries, exponential backoff).
+// The 50ms per-send delay in scheduler.ts provides additional headroom.
+bot.api.config.use(autoRetry());
+
+// Inject MarkdownV2 as default parse_mode for all API calls
 bot.api.config.use((prev, method, payload, signal) =>
   prev(method, { parse_mode: 'MarkdownV2' as const, ...(payload as object) } as typeof payload, signal)
 );
+
+// Dev-only: log raw message text when Telegram rejects MarkdownV2 formatting
+if (process.env.NODE_ENV === 'development') {
+  bot.api.config.use(async (prev, method, payload, signal) => {
+    try {
+      return await prev(method, payload, signal);
+    } catch (err) {
+      if (method === 'sendMessage' || method === 'editMessageText') {
+        const text = (payload as Record<string, unknown>)['text'];
+        logger.error({ action: 'markdownv2_error', method, textPreview: String(text ?? '').slice(0, 200) });
+      }
+      throw err;
+    }
+  });
+}
 
 bot.use(authMiddleware);
 bot.use(menuHandlers);
@@ -27,16 +50,30 @@ bot.use(adminHandlers);
 bot.use(searchHandlers);
 
 bot.catch(async (err) => {
-  console.error('[bot.catch]', err.error);
+  logger.error({
+    action: 'handler_error',
+    error: (err.error as Error).message ?? String(err.error),
+    telegramId: err.ctx.from?.id,
+  });
   try {
     await err.ctx.reply('אירעה שגיאה. אנא נסה שנית מאוחר יותר.');
-  } catch { /* ignore reply failure */ }
+  } catch (replyErr) {
+    logger.error({
+      action: 'error_reply_failed',
+      error: (replyErr as Error).message,
+      telegramId: err.ctx.from?.id,
+    });
+  }
 });
 
-process.once('SIGINT', () => bot.stop());
-process.once('SIGTERM', () => bot.stop());
+const schedulerTasks: ScheduledTask[] = startScheduler(bot);
 
-startScheduler(bot);
+const shutdown = async (): Promise<void> => {
+  schedulerTasks.forEach((t) => t.stop());
+  await bot.stop();
+};
+process.once('SIGINT', () => void shutdown());
+process.once('SIGTERM', () => void shutdown());
 
 await bot.api.setMyCommands([
   { command: 'start', description: 'פתח את התפריט הראשי' },
@@ -45,7 +82,7 @@ await bot.api.setMyCommands([
   { command: 'status', description: 'Dashboard מהיר' },
   { command: 'recent', description: '5 עסקאות אחרונות' },
 ]);
-console.error('[bot] commands registered');
+logger.info({ action: 'commands_registered' });
 
 bot.start();
-console.error('[bot] polling started');
+logger.info({ action: 'polling_started' });

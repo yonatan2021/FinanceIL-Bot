@@ -3,8 +3,18 @@ import { auth } from "@/auth";
 
 const PUBLIC_PATHS = ["/login", "/api/auth", "/api/health"];
 
+const REDIRECTS: Record<string, string> = {
+  "/users": "/bot/users",
+  "/logs": "/bot/logs",
+};
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const destination = REDIRECTS[pathname];
+  if (destination) {
+    return NextResponse.redirect(new URL(destination, request.url), 308);
+  }
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   if (isPublic) return NextResponse.next();

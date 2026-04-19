@@ -22,6 +22,12 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
+    /* Financial semantic colors */
+    --income: 142.1 76.2% 36.3%;
+    --income-subtle: 142.1 76.2% 95%;
+    --expense: 0 84.2% 60.2%;
+    --expense-subtle: 0 84.2% 95%;
+    --balance-subtle: 221.2 83.2% 95%;
     --radius: 0.5rem;
   }
 }

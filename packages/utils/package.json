@@ -11,6 +11,14 @@
     "./dates": {
       "import": "./dist/dates.js",
       "types": "./dist/dates.d.ts"
+    },
+    "./markdown": {
+      "import": "./dist/markdown.js",
+      "types": "./dist/markdown.d.ts"
+    },
+    "./regex": {
+      "import": "./dist/regex.js",
+      "types": "./dist/regex.d.ts"
     }
   },
   "scripts": {
