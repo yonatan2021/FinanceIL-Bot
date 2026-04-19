@@ -53,17 +53,7 @@ searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
 
     const txns = searchTransactions({ category, limit: SEARCH_MAX_RESULTS });
     const escapedCat = escapeMarkdownV2(category);
-
-    let text = txns.length > 0
-      ? `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns)}`
-      : `אין עסקאות בקטגוריה "${escapedCat}"`;
-
-    if (text.length > MAX_MESSAGE_LENGTH) {
-      const truncated = `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns.slice(0, 10))}`;
-      const remaining = txns.length - 10;
-      text = `${truncated}\n\n_וישנן ${remaining} תוצאות נוספות\\. השתמש בייצוא CSV לרשימה מלאה\\._`;
-    }
-
+    const text = buildSearchResultText(txns, escapedCat);
     await ctx.editMessageText(text, { reply_markup: backToMenuKeyboard() });
   } catch (err) {
     logger.error({ action: 'search_category_failed', errorMessage: (err as Error).message });
@@ -91,6 +81,21 @@ searchHandlers.callbackQuery('menu:export', async (ctx) => {
     await ctx.reply('שגיאה ביצירת הקובץ. נסה שוב מאוחר יותר.').catch(() => {});
   }
 });
+
+/** Pure helper: build the MarkdownV2 message for search results, applying truncation if needed. */
+export function buildSearchResultText(txns: Transaction[], escapedCat: string): string {
+  let text = txns.length > 0
+    ? `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns)}`
+    : `אין עסקאות בקטגוריה "${escapedCat}"`;
+
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    const truncated = `🔍 *עסקאות בקטגוריה "${escapedCat}"*\n\n${formatTransactionsMessage(txns.slice(0, 10))}`;
+    const remaining = txns.length - 10;
+    text = `${truncated}\n\n_וישנן ${remaining} תוצאות נוספות\\. השתמש בייצוא CSV לרשימה מלאה\\._`;
+  }
+
+  return text;
+}
 
 export function csvEscape(value: string): string {
   // Prevent formula injection: prefix with single quote

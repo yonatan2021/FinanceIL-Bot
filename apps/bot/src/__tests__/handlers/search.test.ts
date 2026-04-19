@@ -11,7 +11,7 @@ vi.mock('@finance-bot/db', () => ({
   db: {},
 }));
 
-import { csvEscape, generateCSV } from '../../handlers/search.js';
+import { csvEscape, generateCSV, buildSearchResultText } from '../../handlers/search.js';
 import type { Transaction } from '@finance-bot/types';
 
 describe('csvEscape', () => {
@@ -90,14 +90,51 @@ describe('generateCSV', () => {
   });
 });
 
-describe('message length guard logic', () => {
-  it('short messages pass through unchanged (under 3800 chars)', () => {
-    const short = 'א'.repeat(100);
-    expect(short.length < 3800).toBe(true);
+describe('buildSearchResultText — truncation behavior', () => {
+  const makeTxn = (id: string, overrides: Partial<Transaction> = {}): Transaction => ({
+    id,
+    accountId: 'acc-1',
+    date: new Date('2026-04-15'),
+    description: 'א'.repeat(80), // long description to inflate output size
+    amount: -100,
+    currency: 'ILS',
+    type: 'normal',
+    category: 'מזון',
+    status: 'completed',
+    createdAt: new Date(),
+    ...overrides,
   });
 
-  it('long messages would exceed 3800 chars', () => {
-    const long = 'א'.repeat(3900);
-    expect(long.length > 3800).toBe(true);
+  it('returns the full message when output is under 3800 chars', () => {
+    const txns = [makeTxn('1', { description: 'קפה' })];
+    const result = buildSearchResultText(txns, 'מזון');
+    expect(result.length).toBeLessThanOrEqual(3800);
+    expect(result).toContain('מזון');
+    expect(result).not.toContain('תוצאות נוספות');
+  });
+
+  it('returns fallback message when transaction list is empty', () => {
+    const result = buildSearchResultText([], 'מזון');
+    expect(result).toContain('אין עסקאות');
+    expect(result).toContain('מזון');
+  });
+
+  it('truncates to first 10 results when formatted output exceeds 3800 chars', () => {
+    // 50 transactions each with a long description will produce a message > 3800 chars
+    const txns = Array.from({ length: 50 }, (_, i) => makeTxn(String(i)));
+    const result = buildSearchResultText(txns, 'מזון');
+    expect(result.length).toBeGreaterThan(0);
+    // The truncation note in Hebrew should appear
+    expect(result).toContain('תוצאות נוספות');
+    // Should mention the remaining count (50 - 10 = 40)
+    expect(result).toContain('40');
+  });
+
+  it('truncated message is shorter than the full untruncated message', () => {
+    const txns = Array.from({ length: 50 }, (_, i) => makeTxn(String(i)));
+    const fullMessage = `🔍 *עסקאות*\n\n${txns.map((t) => t.description).join('\n')}`;
+    const result = buildSearchResultText(txns, 'מזון');
+    // Result must be within Telegram limits and not contain all 50 descriptions verbatim
+    expect(result.length).toBeLessThanOrEqual(fullMessage.length);
   });
 });
