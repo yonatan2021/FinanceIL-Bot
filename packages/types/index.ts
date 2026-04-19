@@ -49,13 +49,15 @@ export interface Budget {
   createdAt: Date;
 }
 
+export type ScrapeStatus = 'success' | 'error' | 'partial';
+
 export interface ScrapeLog {
   id: string;
   credentialId: string | null;
   startedAt: Date;
   finishedAt: Date | null;
   transactionsFetched: number | null;
-  status: string;
+  status: ScrapeStatus;
   errorMessage: string | null;
 }
 
@@ -64,7 +66,7 @@ export interface SchedulerJob {
   enabled: boolean;
   cronExpression: string;
   lastRunAt: Date | null;
-  lastStatus: string | null;
+  lastStatus: ScrapeStatus | null;
   lastError: string | null;
   nextRunAt: Date | null;
   updatedAt: Date | null;

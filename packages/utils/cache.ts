@@ -57,11 +57,11 @@ export const CACHE_KEYS = {
   SCRAPE_LOG: 'scrape_log',
 } as const;
 
-export const CACHE_TTLS = {
-  BALANCES: 10 * 60 * 1_000,                 // 10 minutes — financial data, fresh between scrapes
-  TRANSACTIONS_CURRENT: 4 * 60 * 60 * 1_000, // 4 hours — invalidated explicitly on scrape
-  BUDGETS: 10 * 60 * 1_000,                  // 10 minutes
-  USERS: 10 * 60 * 1_000,                    // 10 minutes
-  ADMIN_USERS: 10 * 60 * 1_000,              // 10 minutes
-  SCRAPE_LOG: 5 * 60 * 1_000,                // 5 minutes
+export const CACHE_TTLS: Record<keyof typeof CACHE_KEYS, number> = {
+  BALANCES: 10 * 60 * 1_000,
+  TRANSACTIONS_CURRENT: 4 * 60 * 60 * 1_000,
+  BUDGETS: 10 * 60 * 1_000,
+  USERS: 10 * 60 * 1_000,
+  ADMIN_USERS: 10 * 60 * 1_000,
+  SCRAPE_LOG: 5 * 60 * 1_000,
 } as const;

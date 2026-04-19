@@ -113,11 +113,14 @@ export function getAllUsers() {
   return result;
 }
 
-export function getLatestScrapeLog() {
+export function getLatestScrapeLog(): ScrapeLog | undefined {
   if (queryCache.has(CACHE_KEYS.SCRAPE_LOG)) {
     return queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
   }
-  const result = preparedGetLatestScrapeLog.get();
+  const row = preparedGetLatestScrapeLog.get();
+  const result: ScrapeLog | undefined = row
+    ? { ...row, status: row.status as ScrapeLog['status'] }
+    : undefined;
   queryCache.set(CACHE_KEYS.SCRAPE_LOG, result, CACHE_TTLS.SCRAPE_LOG);
   return result;
 }
@@ -248,6 +251,7 @@ export function getBudgetCategories() {
 
 export function invalidateAfterScrape(): void {
   queryCache.delete(CACHE_KEYS.BALANCES);
-  queryCache.delete(currentMonthCacheKey());
+  queryCache.delete(CACHE_KEYS.BUDGETS);
   queryCache.delete(CACHE_KEYS.SCRAPE_LOG);
+  queryCache.invalidatePrefix(CACHE_KEYS.TRANSACTIONS_CURRENT);
 }

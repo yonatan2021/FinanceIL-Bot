@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
-import type { SchedulerJob } from "@finance-bot/types";
+import type { SchedulerJob, ScrapeStatus } from "@finance-bot/types";
 
 const DEFAULT_JOBS = [
   { jobName: 'daily-budget-alerts', cronExpression: '0 8 * * *', enabled: true },
@@ -45,7 +45,7 @@ export async function GET(): Promise<NextResponse> {
       enabled: row.enabled,
       cronExpression: row.cronExpression,
       lastRunAt: row.lastRunAt,
-      lastStatus: row.lastStatus,
+      lastStatus: row.lastStatus as ScrapeStatus | null,
       lastError: row.lastError,
       nextRunAt: row.nextRunAt,
       updatedAt: row.updatedAt,
