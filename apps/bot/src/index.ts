@@ -4,6 +4,8 @@ import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import { Bot } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
+import { conversations, createConversation } from '@grammyjs/conversations';
+import { limit } from '@grammyjs/ratelimiter';
 import type { ScheduledTask } from 'node-cron';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
@@ -14,6 +16,7 @@ import { menuHandlers } from './handlers/menu.js';
 import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
+import { searchWizard } from './conversations/searchWizard.js';
 import { startScheduler } from './scheduler.js';
 import { logger } from './lib/logger.js';
 
@@ -46,6 +49,16 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Order: conversations → rate limiter → auth → handlers
+bot.use(conversations());
+bot.use(createConversation(searchWizard));
+bot.use(limit({
+  timeFrame: 1000,
+  limit: 1,
+  onLimitExceeded: async (ctx) => {
+    await ctx?.reply('יותר מדי בקשות, המתן רגע.').catch(() => {});
+  },
+}));
 bot.use(authMiddleware);
 bot.use(menuHandlers);
 bot.use(dataHandlers);
