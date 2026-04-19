@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
-import type { SchedulerJob } from "@finance-bot/types";
+import type { SchedulerJob, SchedulerJobName, SchedulerJobStatus } from "@finance-bot/types";
 
 const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
 type KnownJob = typeof KNOWN_JOBS[number];
@@ -66,11 +66,11 @@ export async function PUT(
 
   const row = rows[0];
   const data: SchedulerJob = {
-    jobName: row.jobName,
+    jobName: row.jobName as SchedulerJobName,
     enabled: row.enabled,
     cronExpression: row.cronExpression,
     lastRunAt: row.lastRunAt,
-    lastStatus: row.lastStatus,
+    lastStatus: row.lastStatus as SchedulerJobStatus | null,
     lastError: row.lastError,
     nextRunAt: row.nextRunAt,
     updatedAt: row.updatedAt,
