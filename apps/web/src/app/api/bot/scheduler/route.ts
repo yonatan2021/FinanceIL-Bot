@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
-import type { SchedulerJob } from "@finance-bot/types";
+import type { SchedulerJob, SchedulerJobName, SchedulerJobStatus } from "@finance-bot/types";
 
 const DEFAULT_JOBS = [
   { jobName: 'daily-budget-alerts', cronExpression: '0 8 * * *', enabled: true },
@@ -41,11 +41,11 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const data: SchedulerJob[] = rows.map((row) => ({
-      jobName: row.jobName,
+      jobName: row.jobName as SchedulerJobName,
       enabled: row.enabled,
       cronExpression: row.cronExpression,
       lastRunAt: row.lastRunAt,
-      lastStatus: row.lastStatus,
+      lastStatus: row.lastStatus as SchedulerJobStatus | null,
       lastError: row.lastError,
       nextRunAt: row.nextRunAt,
       updatedAt: row.updatedAt,

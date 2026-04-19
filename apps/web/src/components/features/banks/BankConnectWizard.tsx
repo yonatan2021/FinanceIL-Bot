@@ -14,6 +14,7 @@ import { BANKS } from "@/lib/banks";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import type { BankTestResult } from "@finance-bot/types";
 
 interface SafeCredential {
   id: string;
@@ -30,12 +31,6 @@ interface Props {
 }
 
 type Step = 1 | 2 | 3 | 4;
-
-interface TestResult {
-  ok: boolean;
-  accountsFound: number;
-  errorMessage?: string;
-}
 
 const STEP_LABELS: Record<Step, string> = {
   1: "בחר בנק",
@@ -96,7 +91,7 @@ export function BankConnectWizard({ open, onOpenChange, onSuccess }: Props) {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [displayName, setDisplayName] = useState("");
   const [testLoading, setTestLoading] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [testResult, setTestResult] = useState<BankTestResult | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
 
   // Reset all state when dialog opens fresh
@@ -134,14 +129,14 @@ export function BankConnectWizard({ open, onOpenChange, onSuccess }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bankId: selectedBank, loginData: fieldValues }),
       });
-      const json = await res.json() as { success: boolean; data?: TestResult; error?: string };
-      if (json.success && json.data) {
-        setTestResult(json.data);
+      const json = await res.json() as { success: boolean; data?: { ok: boolean; accountsFound?: number; errorMessage?: string }; error?: string };
+      if (json.success && json.data && json.data.ok) {
+        setTestResult({ ok: true, accountsFound: json.data.accountsFound ?? 0 });
       } else {
-        setTestResult({ ok: false, accountsFound: 0, errorMessage: json.error ?? "שגיאה בבדיקת החיבור" });
+        setTestResult({ ok: false, errorMessage: (json.data?.errorMessage ?? json.error) ?? "שגיאה בבדיקת החיבור" });
       }
     } catch {
-      setTestResult({ ok: false, accountsFound: 0, errorMessage: "שגיאת רשת. נסה שוב." });
+      setTestResult({ ok: false, errorMessage: "שגיאת רשת. נסה שוב." });
     } finally {
       setTestLoading(false);
     }

@@ -6,13 +6,12 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
-import type { SchedulerJob } from "@finance-bot/types";
+import type { SchedulerJob, SchedulerJobName } from "@finance-bot/types";
 
-const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
-type KnownJob = typeof KNOWN_JOBS[number];
+const KNOWN_JOBS: SchedulerJobName[] = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'];
 
-function isKnownJob(value: string): value is KnownJob {
-  return (KNOWN_JOBS as readonly string[]).includes(value);
+function isKnownJob(value: string): value is SchedulerJobName {
+  return (KNOWN_JOBS as string[]).includes(value);
 }
 
 export async function PUT(
@@ -69,11 +68,11 @@ export async function PUT(
 
     const row = existing[0];
     const data: SchedulerJob = {
-      jobName: row.jobName,
+      jobName: row.jobName as SchedulerJobName,
       enabled,
       cronExpression: row.cronExpression,
       lastRunAt: row.lastRunAt,
-      lastStatus: row.lastStatus,
+      lastStatus: row.lastStatus as ('success' | 'error') | null,
       lastError: row.lastError,
       nextRunAt: row.nextRunAt,
       updatedAt: now,

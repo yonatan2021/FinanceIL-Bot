@@ -59,12 +59,23 @@ export interface ScrapeLog {
   errorMessage: string | null;
 }
 
+export type BankTestResult =
+  | { ok: true; accountsFound: number }
+  | { ok: false; errorMessage: string }
+
+export type SchedulerJobName =
+  | 'daily-budget-alerts'
+  | 'weekly-summary'
+  | 'monthly-report'
+
+export type SchedulerJobStatus = 'success' | 'error'
+
 export interface SchedulerJob {
-  jobName: string;
+  jobName: SchedulerJobName;
   enabled: boolean;
   cronExpression: string;
   lastRunAt: Date | null;
-  lastStatus: string | null;
+  lastStatus: SchedulerJobStatus | null;
   lastError: string | null;
   nextRunAt: Date | null;
   updatedAt: Date | null;
@@ -80,12 +91,18 @@ export interface BotHeartbeat {
   lastErrorAt: Date | null;
 }
 
+export type BotHeartbeatStatus = 'online' | 'stale'
+
+export interface BotHeartbeatWithStatus extends BotHeartbeat {
+  status: BotHeartbeatStatus
+}
+
 export interface CommandUsage {
   id: number;
   telegramId: string;
   command: string;
   timestamp: Date;
-  success: boolean | null;
+  success: boolean;
   durationMs: number | null;
 }
 

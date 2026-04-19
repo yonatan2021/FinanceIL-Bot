@@ -1,10 +1,5 @@
 import { create } from "zustand";
-
-interface TestResult {
-  ok: boolean;
-  accountsFound?: number;
-  errorMessage?: string;
-}
+import type { BankTestResult } from "@finance-bot/types";
 
 interface BankWizardStore {
   open: boolean;
@@ -12,13 +7,13 @@ interface BankWizardStore {
   selectedBankId: string | null;
   formValues: Record<string, string>;
   displayName: string;
-  testResult: TestResult | null;
+  testResult: BankTestResult | null;
   setOpen: (open: boolean) => void;
   setStep: (step: 1 | 2 | 3 | 4) => void;
   setSelectedBank: (bankId: string) => void;
   setFormValues: (values: Record<string, string>) => void;
   setDisplayName: (name: string) => void;
-  setTestResult: (result: TestResult | null) => void;
+  setTestResult: (result: BankTestResult | null) => void;
   reset: () => void;
 }
 

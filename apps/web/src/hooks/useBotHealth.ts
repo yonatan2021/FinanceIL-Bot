@@ -1,19 +1,11 @@
 import useSWR from "swr";
 import { fetcher, ApiError } from "@/lib/fetcher";
+import type { BotHeartbeatWithStatus } from "@finance-bot/types";
 
-export interface BotHealthData {
-  id: number;
-  lastBeatAt: string | null;
-  pid: number | null;
-  memoryMb: number | null;
-  uptimeSec: number | null;
-  lastError: string | null;
-  lastErrorAt: string | null;
-  status: "online" | "stale";
-}
+export type { BotHeartbeatWithStatus as BotHealthData };
 
 export function useBotHealth() {
-  const { data, error, isLoading, mutate } = useSWR<BotHealthData | null>(
+  const { data, error, isLoading, mutate } = useSWR<BotHeartbeatWithStatus | null>(
     "/api/bot/health",
     fetcher,
     { refreshInterval: 15_000 }
