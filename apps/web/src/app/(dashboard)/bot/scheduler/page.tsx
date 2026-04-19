@@ -117,13 +117,13 @@ export default function SchedulerPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">שם משרה</TableHead>
+                  <TableHead className="text-end">שם משרה</TableHead>
                   <TableHead className="text-right" dir="ltr">ביטוי Cron</TableHead>
-                  <TableHead className="text-right">סטטוס</TableHead>
-                  <TableHead className="text-right">ריצה אחרונה</TableHead>
-                  <TableHead className="text-right">ריצה הבאה</TableHead>
-                  <TableHead className="text-right">מופעל</TableHead>
-                  <TableHead className="text-right">הודעה שקטה</TableHead>
+                  <TableHead className="text-end">סטטוס</TableHead>
+                  <TableHead className="text-end">ריצה אחרונה</TableHead>
+                  <TableHead className="text-end">ריצה הבאה</TableHead>
+                  <TableHead className="text-end">מופעל</TableHead>
+                  <TableHead className="text-end">הודעה שקטה</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
