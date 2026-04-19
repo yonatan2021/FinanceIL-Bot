@@ -7,7 +7,7 @@ import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import type { SchedulerJob } from "@finance-bot/types";
+import type { SchedulerJob, ScrapeStatus } from "@finance-bot/types";
 
 const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
 type KnownJob = typeof KNOWN_JOBS[number];
@@ -92,7 +92,7 @@ export async function PUT(
       enabled: updated.enabled,
       cronExpression: updated.cronExpression,
       lastRunAt: updated.lastRunAt,
-      lastStatus: updated.lastStatus,
+      lastStatus: updated.lastStatus as ScrapeStatus | null,
       lastError: updated.lastError,
       nextRunAt: updated.nextRunAt,
       updatedAt: updated.updatedAt,
