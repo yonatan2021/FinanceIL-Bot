@@ -92,3 +92,45 @@ describe('TTLCache', () => {
     expect(cache.get('k')).toBeUndefined();
   });
 });
+
+describe('TTLCache - undefined value caching', () => {
+  it('caches undefined values and distinguishes from cache miss via has()', () => {
+    const cache = new TTLCache();
+    cache.set('k', undefined, 10_000);
+    expect(cache.has('k')).toBe(true);
+    expect(cache.get('k')).toBeUndefined();
+  });
+
+  it('has() returns false for missing key', () => {
+    const cache = new TTLCache();
+    expect(cache.has('missing')).toBe(false);
+  });
+
+  it('has() returns false after TTL expires', () => {
+    vi.useFakeTimers();
+    const cache = new TTLCache();
+    cache.set('k', 'v', 1_000);
+    vi.advanceTimersByTime(1_001);
+    expect(cache.has('k')).toBe(false);
+    vi.useRealTimers();
+  });
+});
+
+describe('TTLCache - set guard', () => {
+  it('throws when ttlMs is 0', () => {
+    const cache = new TTLCache();
+    expect(() => cache.set('k', 'v', 0)).toThrow('ttlMs must be positive');
+  });
+
+  it('throws when ttlMs is negative', () => {
+    const cache = new TTLCache();
+    expect(() => cache.set('k', 'v', -1)).toThrow('ttlMs must be positive');
+  });
+
+  it('overwrites existing key with new value', () => {
+    const cache = new TTLCache();
+    cache.set('k', 'old', 10_000);
+    cache.set('k', 'new', 10_000);
+    expect(cache.get('k')).toBe('new');
+  });
+});

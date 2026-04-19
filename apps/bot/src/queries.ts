@@ -114,8 +114,9 @@ export function getAllUsers() {
 }
 
 export function getLatestScrapeLog() {
-  const cached = queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
-  if (cached !== undefined) return cached;
+  if (queryCache.has(CACHE_KEYS.SCRAPE_LOG)) {
+    return queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
+  }
   const result = preparedGetLatestScrapeLog.get();
   queryCache.set(CACHE_KEYS.SCRAPE_LOG, result, CACHE_TTLS.SCRAPE_LOG);
   return result;

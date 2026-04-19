@@ -16,7 +16,18 @@ export class TTLCache {
     return entry.value as T;
   }
 
+  has(key: string): boolean {
+    const entry = this.store.get(key);
+    if (entry === undefined) return false;
+    if (Date.now() >= entry.expiresAt) {
+      this.store.delete(key);
+      return false;
+    }
+    return true;
+  }
+
   set<T>(key: string, value: T, ttlMs: number): void {
+    if (ttlMs <= 0) throw new Error(`TTLCache.set: ttlMs must be positive, got ${ttlMs}`);
     this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
   }
 
