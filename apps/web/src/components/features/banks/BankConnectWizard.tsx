@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -182,6 +183,9 @@ export function BankConnectWizard({ open, onOpenChange, onSuccess }: Props) {
       <DialogContent dir="rtl" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>חיבור בנק חדש</DialogTitle>
+          <DialogDescription className="sr-only">
+            חיבור חשבון בנק חדש לניטור אוטומטי
+          </DialogDescription>
         </DialogHeader>
 
         <StepIndicator current={step} />

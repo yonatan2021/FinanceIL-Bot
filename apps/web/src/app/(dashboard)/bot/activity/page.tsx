@@ -65,30 +65,39 @@ export default function BotActivityPage() {
 
         {isLoading && <TableSkeleton rows={5} cols={4} />}
 
-        {!isLoading && !error && data && (
+        {!isLoading && !error && data?.meta && (
           <>
-            {/* Summary cards */}
+            {/* Summary stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg border bg-white p-5 space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  סה״כ פקודות (7 ימים)
-                </p>
-                <p className="text-2xl font-bold">{data.meta.totalCommands}</p>
-              </div>
-              <div className="rounded-lg border bg-white p-5 space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  משתמשים ייחודיים
-                </p>
-                <p className="text-2xl font-bold">{data.meta.uniqueUsers}</p>
-              </div>
-              <div className="rounded-lg border bg-white p-5 space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  אחוז הצלחה
-                </p>
-                <p className="text-2xl font-bold">
-                  {data.meta.successRate !== null ? `${data.meta.successRate}%` : "—"}
-                </p>
-              </div>
+              {[
+                {
+                  label: "סה״כ פקודות (7 ימים)",
+                  value: String(data.meta.totalCommands),
+                },
+                {
+                  label: "משתמשים ייחודיים",
+                  value: String(data.meta.uniqueUsers),
+                },
+                {
+                  label: "אחוז הצלחה",
+                  value: data.meta.successRate !== null
+                    ? `${data.meta.successRate}%`
+                    : "—",
+                },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className="bg-white rounded-xl border border-slate-200/80 p-5 space-y-1"
+                  style={{ boxShadow: "var(--shadow-sm)" }}
+                >
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    {label}
+                  </p>
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums" dir="ltr">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* Commands table */}

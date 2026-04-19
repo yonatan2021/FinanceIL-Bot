@@ -97,7 +97,7 @@ export function BotSettingsView() {
       <TopBar title="הגדרות בוט" />
       <div className="p-6 max-w-2xl space-y-8">
         {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive text-sm text-right">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive text-sm text-end">
             שגיאה בטעינת ההגדרות.{" "}
             <button
               onClick={() => void mutate()}
@@ -110,8 +110,8 @@ export function BotSettingsView() {
 
         {/* Section A — Dashboard URL */}
         <section className="rounded-lg border bg-white p-5 space-y-4">
-          <h2 className="text-base font-semibold text-right">כתובת הדשבורד</h2>
-          <p className="text-sm text-muted-foreground text-right">
+          <h2 className="text-base font-semibold text-end">כתובת הדשבורד</h2>
+          <p className="text-sm text-muted-foreground text-end">
             כתובת URL של לוח הבקרה — משמשת ליצירת כפתור "פתח דשבורד" בהודעות הבוט.
           </p>
           <div className="flex gap-2">
@@ -154,8 +154,8 @@ export function BotSettingsView() {
 
         {/* Section B — Deep Links */}
         <section className="rounded-lg border bg-white p-5 space-y-4">
-          <h2 className="text-base font-semibold text-right">קישורים עמוקים</h2>
-          <p className="text-sm text-muted-foreground text-right">
+          <h2 className="text-base font-semibold text-end">קישורים עמוקים</h2>
+          <p className="text-sm text-muted-foreground text-end">
             קישורים ישירים לחלקים שונים בבוט. החלף את <code className="font-mono bg-muted px-1 rounded">&lt;שם-הבוט&gt;</code> בשם המשתמש של הבוט ב-Telegram.
           </p>
           <div className="space-y-2">
@@ -163,7 +163,7 @@ export function BotSettingsView() {
               const link = `t.me/<שם-הבוט>?start=${key}`;
               return (
                 <div key={key} className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                  <span className="text-sm text-muted-foreground min-w-20 text-right">{label}</span>
+                  <span className="text-sm text-muted-foreground min-w-20 text-end">{label}</span>
                   <span dir="ltr" className="flex-1 font-mono text-xs text-slate-700">{link}</span>
                   <button
                     onClick={() => void handleCopy(link)}
@@ -180,7 +180,7 @@ export function BotSettingsView() {
 
         {/* Section C — Feature Toggles */}
         <section className="rounded-lg border bg-white p-5 space-y-4">
-          <h2 className="text-base font-semibold text-right">הגדרות פיצ'רים</h2>
+          <h2 className="text-base font-semibold text-end">הגדרות פיצ'רים</h2>
           <div className="space-y-3">
             {FEATURE_TOGGLES.map(({ field, label }) => {
               const enabled = config?.[field] ?? false;
@@ -193,7 +193,7 @@ export function BotSettingsView() {
                     onCheckedChange={() => void handleToggle(field, enabled)}
                     aria-label={label}
                   />
-                  <span className="text-sm font-medium text-right">{label}</span>
+                  <span className="text-sm font-medium text-end">{label}</span>
                 </div>
               );
             })}
