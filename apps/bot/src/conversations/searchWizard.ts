@@ -1,31 +1,32 @@
 import { InlineKeyboard } from 'grammy';
 import type { Conversation } from '@grammyjs/conversations';
-import type { Context } from 'grammy';
+import type { BotContext } from '../types.js';
 import { searchTransactions, getBudgetCategories } from '../queries.js';
 import { formatTransactionsMessage } from '../formatters.js';
+import { escapeMarkdownV2 } from '@finance-bot/utils/markdown';
 import { logger } from '../lib/logger.js';
 
 const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
-function parseDateInput(input: string): Date {
+function parseDateInput(input: string): { date: Date; usedFallback: boolean } {
   const normalized = input.trim().toLowerCase();
   if (normalized === 'חודש אחרון' || normalized === 'last month') {
-    return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return { date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), usedFallback: false };
   }
   // Try DD/MM/YYYY
   const match = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (match) {
     const [, d, m, y] = match;
-    return new Date(Number(y), Number(m) - 1, Number(d));
+    return { date: new Date(Number(y), Number(m) - 1, Number(d)), usedFallback: false };
   }
   // Default: start of current month
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
+  return { date: new Date(now.getFullYear(), now.getMonth(), 1), usedFallback: true };
 }
 
 export async function searchWizard(
-  conversation: Conversation<Context, Context>,
-  ctx: Context,
+  conversation: Conversation<BotContext, BotContext>,
+  ctx: BotContext,
 ): Promise<void> {
   // Step 1: Ask for search query text
   await ctx.reply(
@@ -52,7 +53,10 @@ export async function searchWizard(
       await c.reply('נא לשלוח תאריך בפורמט DD/MM/YYYY או "חודש אחרון".').catch(() => {});
     },
   });
-  const fromDate = parseDateInput(dateCtx.message.text);
+  const { date: fromDate, usedFallback } = parseDateInput(dateCtx.message.text);
+  if (usedFallback) {
+    await dateCtx.reply('פורמט תאריך לא זוהה — משתמש בתחילת החודש הנוכחי.').catch(() => {});
+  }
 
   // Step 3: Show category picker
   const categories = await conversation.external(() => getBudgetCategories());
@@ -81,9 +85,9 @@ export async function searchWizard(
   await catCtx.answerCallbackQuery({ text: '✓' }).catch(() => {});
   const category = decodeURIComponent(catCtx.callbackQuery.data.replace('wizard:cat:', ''));
 
-  // Execute search
+  // Execute search — pass keyword, startDate, and category collected from wizard steps
   const txns = await conversation.external(() =>
-    searchTransactions({ category, limit: 20 }),
+    searchTransactions({ keyword: searchQuery, startDate: fromDate, category, limit: 20 }),
   );
 
   logger.info({
@@ -95,12 +99,14 @@ export async function searchWizard(
   });
 
   if (txns.length === 0) {
-    await catCtx.reply(`לא נמצאו עסקאות בקטגוריה "${category}".`).catch(() => {});
+    await catCtx.reply(`לא נמצאו עסקאות בקטגוריה "${escapeMarkdownV2(category)}".`, {
+      parse_mode: 'MarkdownV2',
+    }).catch(() => {});
     return;
   }
 
   const text = formatTransactionsMessage(txns);
-  await catCtx.reply(`🔍 *תוצאות חיפוש — ${category}*\n\n${text}`, {
+  await catCtx.reply(`🔍 *תוצאות חיפוש — ${escapeMarkdownV2(category)}*\n\n${text}`, {
     parse_mode: 'MarkdownV2',
   }).catch(() => {});
 }

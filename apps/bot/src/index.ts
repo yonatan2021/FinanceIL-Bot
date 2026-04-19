@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
-import { Bot } from 'grammy';
+import { Bot, session } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { limit } from '@grammyjs/ratelimiter';
@@ -10,7 +10,7 @@ import type { ScheduledTask } from 'node-cron';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
 import { allowedUsers } from '@finance-bot/db/schema';
-import type { BotContext } from './types.js';
+import type { BotContext, SessionData } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
 import { dataHandlers } from './handlers/data.js';
@@ -49,7 +49,9 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// Order: conversations → rate limiter → auth → handlers
+// Order: session → conversations → rate limiter → auth → handlers
+// session must come before conversations() — required by grammY conversations v2
+bot.use(session<SessionData, BotContext>({ initial: () => ({} as SessionData) }));
 bot.use(conversations());
 bot.use(createConversation(searchWizard));
 bot.use(limit({
