@@ -37,7 +37,7 @@ export function TopBar({ title }: { title: string }) {
         onClick={handleSignOut}
         className="gap-2 text-slate-500 hover:text-slate-700"
       >
-        <LogOut className="h-4 w-4" />
+        <LogOut className="h-4 w-4 rtl:scale-x-[-1]" aria-hidden="true" />
         <span className="hidden sm:inline">יציאה</span>
       </Button>
     </header>
