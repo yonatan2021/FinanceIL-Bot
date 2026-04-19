@@ -1,4 +1,4 @@
-import { Composer, InlineKeyboard, InputFile } from 'grammy';
+import { Composer, InputFile } from 'grammy';
 import type { BotContext } from '../types.js';
 import { searchTransactions, getBudgetCategories, getCurrentMonthTransactions } from '../queries.js';
 import { formatTransactionsMessage } from '../formatters.js';
@@ -15,34 +15,12 @@ const MAX_MESSAGE_LENGTH = 3800;
 export const searchHandlers = new Composer<BotContext>();
 
 searchHandlers.callbackQuery('menu:search', async (ctx) => {
-  await ctx.answerCallbackQuery();
-  try {
-    const categories = getBudgetCategories();
-
-    if (categories.length === 0) {
-      await ctx.editMessageText('אין קטגוריות פעילות להצגה.', {
-        reply_markup: backToMenuKeyboard(),
-      });
-      return;
-    }
-
-    const kb = new InlineKeyboard();
-    categories.forEach((cat) => {
-      kb.text(cat, `search:category:${encodeURIComponent(cat)}`).row();
-    });
-    kb.text('⬅️ תפריט ראשי', 'menu:back');
-
-    await ctx.editMessageText('🔍 *חיפוש עסקאות*\n\nבחר קטגוריה:', {
-      reply_markup: kb,
-    });
-  } catch (err) {
-    logger.error({ action: 'search_categories_load_failed', errorMessage: (err as Error).message });
-    await ctx.reply('שגיאה בטעינת הקטגוריות. נסה שוב מאוחר יותר.').catch(() => {});
-  }
+  await ctx.answerCallbackQuery({ text: '✓' });
+  await ctx.conversation.enter('searchWizard');
 });
 
 searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   try {
     const category = decodeURIComponent(ctx.match[1]);
     const knownCategories = getBudgetCategories();
@@ -62,11 +40,13 @@ searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
 });
 
 searchHandlers.callbackQuery('menu:export', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   try {
     const txns = getCurrentMonthTransactions();
     if (txns.length === 0) {
-      await ctx.reply('אין עסקאות לחודש הנוכחי לייצוא.');
+      await ctx.editMessageText('אין עסקאות לחודש הנוכחי לייצוא.', {
+        reply_markup: backToMenuKeyboard(),
+      });
       return;
     }
     const csv = generateCSV(txns);

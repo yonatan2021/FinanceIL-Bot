@@ -1,5 +1,11 @@
 import { InlineKeyboard } from 'grammy';
+import type { InlineKeyboardButton } from '@grammyjs/types';
 import type { AllowedUser } from '@finance-bot/types';
+
+export function openDashboardButton(): InlineKeyboardButton.UrlButton {
+  const url = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  return InlineKeyboard.url('📊 פתח דשבורד', url);
+}
 
 export function mainMenuKeyboard(user: AllowedUser): InlineKeyboard {
   const kb = new InlineKeyboard()
@@ -15,6 +21,8 @@ export function mainMenuKeyboard(user: AllowedUser): InlineKeyboard {
   if (user.role === 'admin') {
     kb.row().text('⚙️ הגדרות', 'menu:settings');
   }
+
+  kb.row().add(openDashboardButton());
 
   return kb;
 }

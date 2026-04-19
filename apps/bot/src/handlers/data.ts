@@ -20,7 +20,7 @@ import { buildSpending } from '../helpers.js';
 export const dataHandlers = new Composer<BotContext>();
 
 dataHandlers.callbackQuery('menu:balances', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const rows = getAllAccountsWithBank();
   const text = formatBalancesMessage(rows);
   await ctx.editMessageText(`💰 *יתרות חשבונות*\n\n${text}`, {
@@ -29,7 +29,7 @@ dataHandlers.callbackQuery('menu:balances', async (ctx) => {
 });
 
 dataHandlers.callbackQuery('menu:summary', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const txns = getCurrentMonthTransactions();
   const budgets = getActiveBudgets();
   const spending = buildSpending(txns);
@@ -50,13 +50,13 @@ function buildTransactionsPage(page: number): { text: string; keyboard: InlineKe
 }
 
 dataHandlers.callbackQuery('menu:transactions', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const { text, keyboard } = buildTransactionsPage(1);
   await ctx.editMessageText(text, { reply_markup: keyboard });
 });
 
 dataHandlers.callbackQuery(/^transactions:page:(\d+)$/, async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const page = parseInt(ctx.match[1], 10);
   const { text, keyboard } = buildTransactionsPage(page);
   await ctx.editMessageText(text, { reply_markup: keyboard });
@@ -67,7 +67,7 @@ dataHandlers.callbackQuery('noop', async (ctx) => {
 });
 
 dataHandlers.callbackQuery('menu:budget', async (ctx) => {
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const budgets = getActiveBudgets();
   const txns = getCurrentMonthTransactions();
   const spending = buildSpending(txns);

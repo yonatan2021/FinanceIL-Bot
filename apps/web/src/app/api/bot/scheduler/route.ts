@@ -49,6 +49,7 @@ export async function GET(): Promise<NextResponse> {
       lastError: row.lastError,
       nextRunAt: row.nextRunAt,
       updatedAt: row.updatedAt,
+      silentNotifications: row.silentNotifications,
     }));
 
     return NextResponse.json({ success: true, data });

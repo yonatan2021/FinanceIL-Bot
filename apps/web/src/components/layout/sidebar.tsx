@@ -60,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/bot/scheduler", label: "מתזמן", icon: Clock },
       { href: "/bot/logs", label: "לוגי סקרייפינג", icon: ScrollText },
       { href: "/bot/activity", label: "פעילות פקודות", icon: BarChart2 },
+      { href: "/bot/settings", label: "הגדרות בוט", icon: Settings },
     ],
   },
   {

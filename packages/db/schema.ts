@@ -82,6 +82,7 @@ export const schedulerState = sqliteTable('scheduler_state', {
   lastError: text('last_error'),
   nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
+  silentNotifications: integer('silent_notifications', { mode: 'boolean' }).default(false).notNull(),
 });
 
 // Bot heartbeat — single row, updated every 30s by bot
@@ -107,6 +108,16 @@ export const commandUsage = sqliteTable('command_usage', {
   idxTelegramTimestamp: index('idx_command_usage_telegram').on(table.telegramId, table.timestamp),
   idxCommandTimestamp: index('idx_command_usage_command').on(table.command, table.timestamp),
 }));
+
+// Bot configuration — single row (id=1 always)
+export const botConfig = sqliteTable('bot_config', {
+  id: integer('id').primaryKey().default(1),
+  dashboardUrl: text('dashboard_url').notNull().default(''),
+  enableDeepLinks: integer('enable_deep_links', { mode: 'boolean' }).notNull().default(true),
+  enablePinning: integer('enable_pinning', { mode: 'boolean' }).notNull().default(true),
+  enableConversations: integer('enable_conversations', { mode: 'boolean' }).notNull().default(true),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
 
 // Category auto-sort rules
 export const categoryRules = sqliteTable('category_rules', {

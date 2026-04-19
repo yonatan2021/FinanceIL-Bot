@@ -17,6 +17,7 @@ export default function BotOverviewPage() {
   const { logs: recentLogs, error: logsError, isLoading: logsLoading, mutate: mutateLogs } = useScrapeLogs(3);
   const [scrapeLoading, setScrapeLoading] = useState(false);
 
+
   const handleScrape = async () => {
     setScrapeLoading(true);
     try {

@@ -13,17 +13,25 @@ function isAdmin(ctx: BotContext): boolean {
 
 adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: 'מופעל...' });
+
+  const secret = process.env.INTERNAL_API_SECRET;
+  if (!secret) {
+    logger.error({ action: 'scraper_trigger_aborted', reason: 'INTERNAL_API_SECRET_missing' });
+    await ctx.editMessageText('❌ שגיאת תצורה פנימית\\.', { reply_markup: adminMenuKeyboard() });
+    return;
+  }
+
   await ctx.editMessageText('🔄 מפעיל סקרייפר...', { reply_markup: adminMenuKeyboard() });
 
   try {
     const webUrl = process.env.WEB_INTERNAL_URL ?? 'http://web:5200';
     const res = await fetch(`${webUrl}/api/scrape`, {
       method: 'POST',
-      headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '' },
+      headers: { 'x-internal-secret': secret },
     });
     if (!res.ok) {
       logger.error({ action: 'scraper_api_failed', status: res.status });
@@ -43,10 +51,10 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
 
 adminHandlers.callbackQuery('admin:users', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const users = getAllUsers();
   const text = formatUsersMessage(users);
   await ctx.editMessageText(`👥 *משתמשים*\n\n${text}`, {
@@ -56,10 +64,10 @@ adminHandlers.callbackQuery('admin:users', async (ctx) => {
 
 adminHandlers.callbackQuery('admin:logs', async (ctx) => {
   if (!isAdmin(ctx)) {
-    await ctx.answerCallbackQuery({ text: 'אין הרשאה.' });
+    await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery();
+  await ctx.answerCallbackQuery({ text: '✓' });
   const log = getLatestScrapeLog();
   const text = formatScrapeLogMessage(log);
   await ctx.editMessageText(`📋 *לוג אחרון*\n\n${text}`, {

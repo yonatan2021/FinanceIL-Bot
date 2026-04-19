@@ -2,15 +2,21 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
-import { Bot } from 'grammy';
+import { Bot, session } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
+import { conversations, createConversation } from '@grammyjs/conversations';
+import { limit } from '@grammyjs/ratelimiter';
 import type { ScheduledTask } from 'node-cron';
-import type { BotContext } from './types.js';
+import { eq, and } from 'drizzle-orm';
+import { db } from '@finance-bot/db';
+import { allowedUsers } from '@finance-bot/db/schema';
+import type { BotContext, SessionData } from './types.js';
 import { authMiddleware } from './middleware/auth.js';
 import { menuHandlers } from './handlers/menu.js';
 import { dataHandlers } from './handlers/data.js';
 import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
+import { searchWizard } from './conversations/searchWizard.js';
 import { startScheduler } from './scheduler.js';
 import { logger } from './lib/logger.js';
 
@@ -43,6 +49,18 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Order: session → conversations → rate limiter → auth → handlers
+// session must come before conversations() — required by grammY conversations v2
+bot.use(session<SessionData, BotContext>({ initial: () => ({} as SessionData) }));
+bot.use(conversations());
+bot.use(createConversation(searchWizard));
+bot.use(limit({
+  timeFrame: 1000,
+  limit: 1,
+  onLimitExceeded: async (ctx) => {
+    await ctx?.reply('יותר מדי בקשות, המתן רגע.').catch(() => {});
+  },
+}));
 bot.use(authMiddleware);
 bot.use(menuHandlers);
 bot.use(dataHandlers);
@@ -75,14 +93,40 @@ const shutdown = async (): Promise<void> => {
 process.once('SIGINT', () => void shutdown());
 process.once('SIGTERM', () => void shutdown());
 
-await bot.api.setMyCommands([
+const standardCommands = [
   { command: 'start', description: 'פתח את התפריט הראשי' },
   { command: 'menu', description: 'תפריט ראשי' },
   { command: 'help', description: 'רשימת כל הפקודות' },
   { command: 'status', description: 'Dashboard מהיר' },
   { command: 'recent', description: '5 עסקאות אחרונות' },
-]);
-logger.info({ action: 'commands_registered' });
+] as const;
+
+const adminCommands = [
+  ...standardCommands,
+  { command: 'admin', description: '⚙️ פאנל ניהול (אדמין בלבד)' },
+] as const;
+
+// Set default scope for all users
+await bot.api.setMyCommands(standardCommands, { scope: { type: 'default' } });
+
+// Set scoped commands for each admin
+try {
+  const admins = db.select({ telegramId: allowedUsers.telegramId })
+    .from(allowedUsers)
+    .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
+    .all();
+
+  for (const admin of admins) {
+    await bot.api.setMyCommands(
+      adminCommands,
+      { scope: { type: 'chat', chat_id: admin.telegramId } },
+    );
+  }
+
+  logger.info({ action: 'commands_registered', adminCount: admins.length });
+} catch (err) {
+  logger.error({ action: 'admin_commands_failed', errorCode: (err as NodeJS.ErrnoException).code });
+}
 
 bot.start();
 logger.info({ action: 'polling_started' });
