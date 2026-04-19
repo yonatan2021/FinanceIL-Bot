@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -70,6 +71,9 @@ export function BankDeleteDialog({ open, onOpenChange, credential, onSuccess }: 
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             הסרת חיבור בנק
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            מחיקת פרטי הבנק תסיר את כל הנתונים הקשורים אליו
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
