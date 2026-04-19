@@ -3,41 +3,75 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    /* Base surfaces */
+    --background: 220 20% 97%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
+
+    /* Brand */
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+    --primary-subtle: 221.2 83.2% 96%;
+
+    /* Secondary / muted */
+    --secondary: 215 30% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+    --muted: 215 25% 95%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
+    --accent: 215 30% 93%;
     --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Semantic */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --success: 142.1 76.2% 36.3%;
+
+    /* Borders */
+    --border: 215 25% 89%;
+    --border-subtle: 215 20% 93%;
+    --input: 215 25% 89%;
     --ring: 221.2 83.2% 53.3%;
-    /* Financial semantic colors */
+
+    /* Financial semantic */
     --income: 142.1 76.2% 36.3%;
-    --income-subtle: 142.1 76.2% 95%;
-    --expense: 0 84.2% 60.2%;
-    --expense-subtle: 0 84.2% 95%;
+    --income-subtle: 142.1 60% 95%;
+    --expense: 0 84.2% 58%;
+    --expense-subtle: 0 70% 95%;
     --balance-subtle: 221.2 83.2% 95%;
-    --radius: 0.5rem;
+
+    /* Shadow tokens */
+    --shadow-xs: 0 1px 2px 0 hsl(220 20% 10% / 0.04);
+    --shadow-sm: 0 1px 3px 0 hsl(220 20% 10% / 0.06), 0 1px 2px -1px hsl(220 20% 10% / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(220 20% 10% / 0.07), 0 2px 4px -2px hsl(220 20% 10% / 0.07);
+    --shadow-lg: 0 10px 15px -3px hsl(220 20% 10% / 0.08), 0 4px 6px -4px hsl(220 20% 10% / 0.05);
+
+    /* Radius */
+    --radius: 0.625rem;
+    --radius-sm: 0.375rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.25rem;
   }
 }
 
 @layer base {
   * { @apply border-border; }
+
   body {
-    @apply bg-background text-foreground font-hebrew;
+    @apply bg-background text-foreground;
+    font-family: var(--font-heebo, var(--font-sans));
     font-size: 16px;
     line-height: 1.7;
     word-spacing: 0.05em;
+    letter-spacing: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  [data-financial] {
+    direction: ltr;
+    font-variant-numeric: tabular-nums;
   }
 }
