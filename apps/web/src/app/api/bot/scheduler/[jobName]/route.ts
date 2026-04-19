@@ -24,6 +24,10 @@ export async function PUT(
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
   }
 
+  if ((session.user as { role?: string }).role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
+  }
+
   const { jobName } = await params;
 
   if (!isKnownJob(jobName)) {

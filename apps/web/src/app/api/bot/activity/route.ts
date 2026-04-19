@@ -22,9 +22,15 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
 
   const { searchParams } = new URL(req.url);
-  const range = searchParams.get("range") ?? "7d";
-
-  const days = range === "30d" ? 30 : 7;
+  const rawRange = searchParams.get("range") ?? "7d";
+  const VALID_RANGES = ["7d", "30d"] as const;
+  if (!(VALID_RANGES as readonly string[]).includes(rawRange)) {
+    return NextResponse.json(
+      { error: "range must be '7d' or '30d'", code: "INVALID_PARAMS" },
+      { status: 400 },
+    );
+  }
+  const days = rawRange === "30d" ? 30 : 7;
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   try {

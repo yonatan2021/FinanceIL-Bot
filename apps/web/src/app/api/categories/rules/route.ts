@@ -10,8 +10,8 @@ import { z } from "zod";
 
 const CreateRuleSchema = z.object({
   categoryName: z.string().min(1, "שם קטגוריה נדרש"),
-  pattern: z.string().min(1, "תבנית נדרשת"),
-  priority: z.number().int().optional().default(0),
+  pattern: z.string().min(1, "תבנית נדרשת").max(200, "תבנית ארוכה מדי (מקסימום 200 תווים)"),
+  priority: z.number().int().min(0).max(10_000).optional().default(0),
 });
 
 function isValidRegex(pattern: string): boolean {
@@ -42,6 +42,10 @@ export async function POST(req: Request): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if ((session.user as { role?: string }).role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
   }
 
   let body: unknown;

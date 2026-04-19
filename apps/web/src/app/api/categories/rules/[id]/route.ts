@@ -10,8 +10,8 @@ import { z } from "zod";
 
 const UpdateRuleSchema = z.object({
   categoryName: z.string().min(1).optional(),
-  pattern: z.string().min(1).optional(),
-  priority: z.number().int().optional(),
+  pattern: z.string().min(1).max(200).optional(),
+  priority: z.number().int().min(0).max(10_000).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -36,6 +36,10 @@ export async function PUT(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if ((session.user as { role?: string }).role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
   }
 
   const { id: idStr } = await params;
@@ -94,6 +98,10 @@ export async function DELETE(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if ((session.user as { role?: string }).role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 });
   }
 
   const { id: idStr } = await params;
