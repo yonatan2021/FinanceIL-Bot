@@ -86,7 +86,7 @@ function NavGroup({
 }) {
   return (
     <div>
-      <p className="px-3 mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/70 select-none">
         {section.label}
       </p>
       <div className="space-y-0.5">
@@ -98,12 +98,19 @@ function NavGroup({
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 min-h-11",
+                "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 min-h-11",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                 active
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  ? "bg-blue-50 text-primary font-semibold"
+                  : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-800"
               )}
             >
+              {active && (
+                <span
+                  className="absolute inset-y-1 start-0 w-0.5 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
               <Icon
                 className={cn(
                   "h-4 w-4 shrink-0 transition-colors",
@@ -111,7 +118,7 @@ function NavGroup({
                 )}
                 aria-hidden="true"
               />
-              <span>{label}</span>
+              <span className="truncate">{label}</span>
             </Link>
           );
         })}
@@ -125,25 +132,24 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed end-0 top-0 h-screen w-64 bg-white border-s border-slate-200 flex flex-col z-40 shadow-sm"
+      className="fixed end-0 top-0 h-screen w-64 bg-white border-s border-slate-200/80 flex flex-col z-40"
+      style={{ boxShadow: "var(--shadow-md)" }}
       aria-label="ניווט ראשי"
     >
-      {/* Brand header */}
-      <div className="h-16 flex items-center px-5 border-b border-slate-100 shrink-0">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 group-hover:bg-primary/90 transition-colors">
-            <Wallet className="h-4 w-4 text-white" aria-hidden="true" />
+      <div className="h-16 flex items-center px-4 border-b border-slate-100 shrink-0 bg-gradient-to-b from-white to-slate-50/50">
+        <Link href="/" className="flex items-center gap-3 group w-full">
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow duration-200">
+            <Wallet className="h-[18px] w-[18px] text-white" aria-hidden="true" />
           </div>
-          <div className="leading-tight">
-            <p className="font-bold text-sm text-slate-900">FinanceIL</p>
-            <p className="text-xs text-slate-400 font-normal">Bot Dashboard</p>
+          <div className="leading-tight min-w-0">
+            <p className="font-bold text-sm text-slate-900 tracking-tight">FinanceIL</p>
+            <p className="text-[11px] text-slate-400 font-normal">לוח בקרה פיננסי</p>
           </div>
         </Link>
       </div>
 
-      {/* Navigation */}
       <nav
-        className="flex-1 px-3 py-4 overflow-y-auto space-y-5"
+        className="flex-1 px-2 py-4 overflow-y-auto space-y-5"
         aria-label="תפריט ניווט"
       >
         {NAV_SECTIONS.map((section) => (
@@ -151,9 +157,10 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-3 border-t border-slate-100 shrink-0">
-        <p className="text-xs text-slate-400 text-center">FinanceIL-Bot v0.1</p>
+      <div className="px-4 py-3 border-t border-slate-100 shrink-0 bg-slate-50/50">
+        <p className="text-[10px] text-slate-400/70 text-center tracking-wide">
+          FinanceIL-Bot v0.1
+        </p>
       </div>
     </aside>
   );
