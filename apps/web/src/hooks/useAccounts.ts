@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher, ApiError } from "@/lib/fetcher";
+import { fetcher } from "@/lib/fetcher";
 
 export interface Account {
   id: string;
@@ -14,11 +14,5 @@ export function useAccounts() {
     "/api/accounts",
     fetcher
   );
-  return {
-    accounts: data ?? [],
-    isLoading,
-    isError: !!error,
-    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
-    mutate,
-  };
+  return { accounts: data ?? [], error, isLoading, mutate };
 }
