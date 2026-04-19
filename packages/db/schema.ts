@@ -101,7 +101,7 @@ export const commandUsage = sqliteTable('command_usage', {
   telegramId: text('telegram_id').notNull(),
   command: text('command').notNull(),
   timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
-  success: integer('success', { mode: 'boolean' }).default(true).notNull(),
+  success: integer('success', { mode: 'boolean' }).default(true),
   durationMs: integer('duration_ms'),
 }, (table) => ({
   idxTelegramTimestamp: index('idx_command_usage_telegram').on(table.telegramId, table.timestamp),

@@ -34,7 +34,7 @@ function toDialogCredential(cred: SafeCredential): CredentialForDialog {
 }
 
 export function BanksClient() {
-  const { credentials: creds, mutate } = useCredentials();
+  const { credentials: creds, mutate, error: credsError, isLoading: credsLoading } = useCredentials();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SafeCredential | null>(null);
 
@@ -49,6 +49,15 @@ export function BanksClient() {
 
   return (
     <div className="space-y-4">
+      {credsError && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          שגיאה בטעינת הבנקים.{" "}
+          <button className="underline" onClick={() => void mutate()}>נסה שוב</button>
+        </div>
+      )}
+      {credsLoading && creds.length === 0 && (
+        <div className="mb-4 text-sm text-muted-foreground">טוען...</div>
+      )}
       <div className="flex justify-end">
         <Button
           onClick={() => setWizardOpen(true)}

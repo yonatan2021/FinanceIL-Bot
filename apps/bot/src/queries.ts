@@ -10,7 +10,8 @@ import {
   credentials,
 } from '@finance-bot/db/schema';
 import { currentMonthRange } from '@finance-bot/utils/dates';
-import type { Budget, Transaction } from '@finance-bot/types';
+import { queryCache, CACHE_KEYS, CACHE_TTLS } from '@finance-bot/utils/cache';
+import type { Transaction, AllowedUser, Budget, ScrapeLog } from '@finance-bot/types';
 
 export interface AccountWithBank {
   accountNumber: string;
@@ -18,56 +19,57 @@ export interface AccountWithBank {
   displayName: string | null;
 }
 
-// ---------------------------------------------------------------------------
-// TTL cache
-// ---------------------------------------------------------------------------
+// Prepared statements — compiled once on module load, reused on every call
+const preparedGetActiveBudgets = db
+  .select()
+  .from(budgets)
+  .where(eq(budgets.isActive, true))
+  .prepare();
 
-interface CacheEntry<T> { data: T; expiresAt: number; }
-const _cache = new Map<string, CacheEntry<unknown>>();
+const preparedGetAllUsers = db
+  .select()
+  .from(allowedUsers)
+  .prepare();
 
-function cached<T>(key: string, ttlMs: number, fn: () => T): T {
-  const entry = _cache.get(key) as CacheEntry<T> | undefined;
-  if (entry && Date.now() < entry.expiresAt) return entry.data;
-  const data = fn();
-  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
-  return data;
+const preparedGetAdminUsers = db
+  .select()
+  .from(allowedUsers)
+  .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
+  .prepare();
+
+const preparedGetAllAccountsWithBank = db
+  .select({
+    accountNumber: accounts.accountNumber,
+    balance: accounts.balance,
+    displayName: credentials.displayName,
+  })
+  .from(accounts)
+  .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
+  .prepare();
+
+const preparedGetLatestScrapeLog = db
+  .select()
+  .from(scrapeLogs)
+  .orderBy(desc(scrapeLogs.startedAt))
+  .limit(1)
+  .prepare();
+
+const preparedGetTransactionCount = db
+  .select({ count: sql<number>`count(*)` })
+  .from(transactions)
+  .prepare();
+
+function currentMonthCacheKey(): string {
+  const now = new Date();
+  return `${CACHE_KEYS.TRANSACTIONS_CURRENT}_${now.getFullYear()}_${now.getMonth()}`;
 }
 
-/**
- * Clear one cache entry by key, or flush all entries.
- * Available keys: 'currentMonthTxns' | 'activeBudgets' | 'allAccountsWithBank' |
- *   'totalBalance' | 'allUsers' | 'budgetCategories'
- *
- * Intended to be called after a successful scrape run. Not yet wired to the
- * scraper pipeline — for now, data expires by TTL only.
- */
-export function invalidateCache(key?: string): void {
-  if (key !== undefined) {
-    _cache.delete(key);
-  } else {
-    _cache.clear();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Queries
-// ---------------------------------------------------------------------------
-
-// TTLs align to typical scrape frequency (~5 min). Financial data (30–120 s) expires
-// sooner because a scrape may update it at any time. User/category data (300 s) changes
-// rarely. Cache is per-process — web and bot do not share it.
 export function getAllAccountsWithBank(): AccountWithBank[] {
-  return cached('allAccountsWithBank', 30_000, () =>
-    db
-      .select({
-        accountNumber: accounts.accountNumber,
-        balance: accounts.balance,
-        displayName: credentials.displayName,
-      })
-      .from(accounts)
-      .leftJoin(credentials, eq(accounts.credentialId, credentials.id))
-      .all()
-  );
+  const cached = queryCache.get<AccountWithBank[]>(CACHE_KEYS.BALANCES);
+  if (cached !== undefined) return cached;
+  const result = preparedGetAllAccountsWithBank.all();
+  queryCache.set(CACHE_KEYS.BALANCES, result, CACHE_TTLS.BALANCES);
+  return result;
 }
 
 export function getRecentTransactions(limit = 10) {
@@ -79,48 +81,56 @@ export function getRecentTransactions(limit = 10) {
     .all();
 }
 
-export function getCurrentMonthTransactions() {
-  return cached('currentMonthTxns', 60_000, () => {
-    const { start, end } = currentMonthRange();
-    return db
-      .select()
-      .from(transactions)
-      .where(and(gte(transactions.date, start), lte(transactions.date, end)))
-      .all();
-  });
+export function getCurrentMonthTransactions(limit = 2_000) {
+  const key = currentMonthCacheKey();
+  const cached = queryCache.get<Transaction[]>(key);
+  if (cached !== undefined) return cached;
+  const { start, end } = currentMonthRange();
+  const result = db
+    .select()
+    .from(transactions)
+    .where(and(gte(transactions.date, start), lte(transactions.date, end)))
+    .orderBy(desc(transactions.date))
+    .limit(limit)
+    .all();
+  queryCache.set(key, result, CACHE_TTLS.TRANSACTIONS_CURRENT);
+  return result;
 }
 
 export function getActiveBudgets() {
-  return cached('activeBudgets', 120_000, () =>
-    db
-      .select()
-      .from(budgets)
-      .where(eq(budgets.isActive, true))
-      .all()
-  );
+  const cached = queryCache.get<Budget[]>(CACHE_KEYS.BUDGETS);
+  if (cached !== undefined) return cached;
+  const result = preparedGetActiveBudgets.all();
+  queryCache.set(CACHE_KEYS.BUDGETS, result, CACHE_TTLS.BUDGETS);
+  return result;
 }
 
 export function getAllUsers() {
-  return cached('allUsers', 300_000, () =>
-    db.select().from(allowedUsers).all()
-  );
+  const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.USERS);
+  if (cached !== undefined) return cached;
+  const result = preparedGetAllUsers.all();
+  queryCache.set(CACHE_KEYS.USERS, result, CACHE_TTLS.USERS);
+  return result;
 }
 
-export function getLatestScrapeLog() {
-  return db
-    .select()
-    .from(scrapeLogs)
-    .orderBy(desc(scrapeLogs.startedAt))
-    .limit(1)
-    .get();
+export function getLatestScrapeLog(): ScrapeLog | undefined {
+  if (queryCache.has(CACHE_KEYS.SCRAPE_LOG)) {
+    return queryCache.get<ScrapeLog | undefined>(CACHE_KEYS.SCRAPE_LOG);
+  }
+  const row = preparedGetLatestScrapeLog.get();
+  const result: ScrapeLog | undefined = row
+    ? { ...row, status: row.status as ScrapeLog['status'] }
+    : undefined;
+  queryCache.set(CACHE_KEYS.SCRAPE_LOG, result, CACHE_TTLS.SCRAPE_LOG);
+  return result;
 }
 
 export function getAdminUsers() {
-  return db
-    .select()
-    .from(allowedUsers)
-    .where(and(eq(allowedUsers.role, 'admin'), eq(allowedUsers.isActive, true)))
-    .all();
+  const cached = queryCache.get<AllowedUser[]>(CACHE_KEYS.ADMIN_USERS);
+  if (cached !== undefined) return cached;
+  const result = preparedGetAdminUsers.all();
+  queryCache.set(CACHE_KEYS.ADMIN_USERS, result, CACHE_TTLS.ADMIN_USERS);
+  return result;
 }
 
 export function getTransactionPage(page: number, pageSize = 10) {
@@ -135,42 +145,41 @@ export function getTransactionPage(page: number, pageSize = 10) {
 }
 
 export function getTransactionCount(): number {
-  const result = db.select({ count: sql<number>`count(*)` }).from(transactions).get();
+  const result = preparedGetTransactionCount.get();
   return result?.count ?? 0;
 }
 
-/**
- * @param activeBudgets - Pre-fetched budgets. If provided, bypasses the cache
- *   entirely — ensure data is fresh before passing. Omit to use cached results.
- * @param monthTxns - Pre-fetched transactions. Same cache-bypass caveat as activeBudgets.
- */
-export function getBudgetAlertCount(
-  activeBudgets?: Budget[],
-  monthTxns?: Transaction[],
-): number {
-  const budgetList = activeBudgets ?? getActiveBudgets();
-  const txns = monthTxns ?? getCurrentMonthTransactions();
+function aggregateSpending(txns: { category: string | null; amount: number }[]): Record<string, number> {
   const spending: Record<string, number> = {};
-  txns.forEach((t) => {
+  for (const t of txns) {
     if (t.category) {
       spending[t.category] = (spending[t.category] ?? 0) + t.amount;
     }
-  });
-  return budgetList.filter((b) => {
+  }
+  return spending;
+}
+
+export function computeBudgetAlertCount(
+  activeBudgets: { categoryName: string; monthlyLimit: number; alertThreshold: number | null }[],
+  spending: Record<string, number>,
+): number {
+  return activeBudgets.filter((b) => {
     const spent = spending[b.categoryName] ?? 0;
     const threshold = b.alertThreshold ?? 0.8;
     return b.monthlyLimit > 0 && spent / b.monthlyLimit >= threshold;
   }).length;
 }
 
+export function getBudgetAlertCount(): number {
+  const activeBudgets = getActiveBudgets();
+  const txns = getCurrentMonthTransactions();
+  const spending = aggregateSpending(txns);
+  return computeBudgetAlertCount(activeBudgets, spending);
+}
+
 export function getTotalBalance(): number {
-  return cached('totalBalance', 30_000, () => {
-    const result = db
-      .select({ total: sql<number>`coalesce(sum(${accounts.balance}), 0)` })
-      .from(accounts)
-      .get();
-    return result?.total ?? 0;
-  });
+  const accounts = getAllAccountsWithBank();
+  return accounts.reduce((sum, a) => sum + a.balance, 0);
 }
 
 export function searchTransactions(options: {
@@ -185,7 +194,8 @@ export function searchTransactions(options: {
   const conditions: SQL[] = [];
 
   if (options.keyword) {
-    conditions.push(like(transactions.description, `%${options.keyword}%`));
+    const escapedKeyword = options.keyword.replace(/[%_\\]/g, '\\$&');
+    conditions.push(like(transactions.description, `%${escapedKeyword}%`));
   }
   if (options.category) {
     conditions.push(eq(transactions.category, options.category));
@@ -203,15 +213,15 @@ export function searchTransactions(options: {
     conditions.push(lte(transactions.date, options.endDate));
   }
 
-  const baseQuery = db
+  const effectiveLimit = Math.max(1, Math.min(options.limit ?? 500, 500));
+
+  return db
     .select()
     .from(transactions)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(transactions.date));
-
-  return options.limit !== undefined
-    ? baseQuery.limit(options.limit).all()
-    : baseQuery.all();
+    .orderBy(desc(transactions.date))
+    .limit(effectiveLimit)
+    .all();
 }
 
 export function getAllCategories() {
@@ -224,12 +234,17 @@ export function getAllCategories() {
 }
 
 export function getBudgetCategories() {
-  return cached('budgetCategories', 300_000, () => {
-    const result = db
-      .select({ categoryName: budgets.categoryName })
-      .from(budgets)
-      .where(eq(budgets.isActive, true))
-      .all();
-    return result.map((r) => r.categoryName);
-  });
+  const result = db
+    .select({ categoryName: budgets.categoryName })
+    .from(budgets)
+    .where(eq(budgets.isActive, true))
+    .all();
+  return result.map((r) => r.categoryName);
+}
+
+export function invalidateAfterScrape(): void {
+  queryCache.delete(CACHE_KEYS.BALANCES);
+  queryCache.delete(CACHE_KEYS.BUDGETS);
+  queryCache.delete(CACHE_KEYS.SCRAPE_LOG);
+  queryCache.invalidatePrefix(CACHE_KEYS.TRANSACTIONS_CURRENT);
 }

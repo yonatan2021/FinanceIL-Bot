@@ -1,6 +1,6 @@
 import { Composer } from 'grammy';
 import type { BotContext } from '../types.js';
-import { getAllUsers, getLatestScrapeLog } from '../queries.js';
+import { getAllUsers, getLatestScrapeLog, invalidateAfterScrape } from '../queries.js';
 import { formatUsersMessage, formatScrapeLogMessage } from '../formatters.js';
 import { adminMenuKeyboard } from '../keyboards.js';
 import { logger } from '../lib/logger.js';
@@ -26,15 +26,17 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
       headers: { 'x-internal-secret': process.env.INTERNAL_API_SECRET ?? '' },
     });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      logger.error({ action: 'scraper_api_error', status: res.status, body });
+      logger.error({ action: 'scraper_api_failed', status: res.status });
+    }
+    if (res.ok) {
+      invalidateAfterScrape();
     }
     const resultText = res.ok
       ? '✅ הסקרייפר הושלם בהצלחה.'
       : `❌ שגיאה: סטטוס ${res.status}`;
     await ctx.editMessageText(`🔄 ${resultText}`, { reply_markup: adminMenuKeyboard() });
   } catch (err) {
-    logger.error({ action: 'scraper_trigger_failed', errorMessage: (err as Error).message });
+    logger.error({ action: 'scraper_trigger_failed', errorCode: (err as NodeJS.ErrnoException).code });
     await ctx.editMessageText('❌ שגיאת חיבור לשרת.', { reply_markup: adminMenuKeyboard() });
   }
 });

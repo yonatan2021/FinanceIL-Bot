@@ -5,7 +5,7 @@ import {
   getRecentTransactions,
   getCurrentMonthTransactions,
   getTotalBalance,
-  getBudgetAlertCount,
+  computeBudgetAlertCount,
   getActiveBudgets,
 } from '../queries.js';
 import {
@@ -46,9 +46,10 @@ menuHandlers.command('help', async (ctx) => {
 menuHandlers.command('status', async (ctx) => {
   const totalBalance = getTotalBalance();
   const txns = getCurrentMonthTransactions();
+  const activeBudgets = getActiveBudgets();
   const spending = buildSpending(txns);
   const monthSpending = Object.values(spending).reduce((sum, val) => sum + val, 0);
-  const alertCount = getBudgetAlertCount();
+  const alertCount = computeBudgetAlertCount(activeBudgets, spending);
   const text = formatStatusMessage(totalBalance, monthSpending, alertCount);
   await ctx.reply(text, { reply_markup: backToMenuKeyboard() });
 });

@@ -10,10 +10,23 @@ export class ApiError extends Error {
 }
 
 export const fetcher = async <T>(url: string): Promise<T> => {
-  const res = await fetch(url);
-  const json = (await res.json()) as { success: boolean; data?: T; error?: string; code?: string };
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new ApiError("שגיאת רשת — בדוק את החיבור שלך", "NETWORK_ERROR");
+  }
+
+  let json: { success: boolean; data?: T; error?: string; code?: string };
+  try {
+    json = (await res.json()) as typeof json;
+  } catch {
+    throw new ApiError(`שגיאת שרת (${res.status})`, "SERVER_ERROR", res.status);
+  }
+
   if (!json.success) {
     throw new ApiError(json.error ?? "שגיאה לא ידועה", json.code, res.status);
   }
+
   return json.data as T;
 };

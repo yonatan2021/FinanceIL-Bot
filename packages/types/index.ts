@@ -49,33 +49,24 @@ export interface Budget {
   createdAt: Date;
 }
 
+export type ScrapeStatus = 'success' | 'error' | 'partial';
+
 export interface ScrapeLog {
   id: string;
   credentialId: string | null;
   startedAt: Date;
   finishedAt: Date | null;
   transactionsFetched: number | null;
-  status: string;
+  status: ScrapeStatus;
   errorMessage: string | null;
 }
 
-export type BankTestResult =
-  | { ok: true; accountsFound: number }
-  | { ok: false; errorMessage: string }
-
-export type SchedulerJobName =
-  | 'daily-budget-alerts'
-  | 'weekly-summary'
-  | 'monthly-report'
-
-export type SchedulerJobStatus = 'success' | 'error'
-
 export interface SchedulerJob {
-  jobName: SchedulerJobName;
+  jobName: string;
   enabled: boolean;
   cronExpression: string;
   lastRunAt: Date | null;
-  lastStatus: SchedulerJobStatus | null;
+  lastStatus: ScrapeStatus | null;
   lastError: string | null;
   nextRunAt: Date | null;
   updatedAt: Date | null;
@@ -91,18 +82,12 @@ export interface BotHeartbeat {
   lastErrorAt: Date | null;
 }
 
-export type BotHeartbeatStatus = 'online' | 'stale'
-
-export interface BotHeartbeatWithStatus extends BotHeartbeat {
-  status: BotHeartbeatStatus
-}
-
 export interface CommandUsage {
   id: number;
   telegramId: string;
   command: string;
   timestamp: Date;
-  success: boolean;
+  success: boolean | null;
   durationMs: number | null;
 }
 

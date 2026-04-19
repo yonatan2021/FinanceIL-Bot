@@ -10,8 +10,8 @@ import { z } from "zod";
 
 const UpdateRuleSchema = z.object({
   categoryName: z.string().min(1).optional(),
-  pattern: z.string().min(1).optional(),
-  priority: z.number().int().optional(),
+  pattern: z.string().min(1).max(200).optional(),
+  priority: z.number().int().min(0).max(10_000).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -68,18 +68,23 @@ export async function PUT(
     );
   }
 
-  const db = await getDb();
-  const [updated] = await db
-    .update(categoryRules)
-    .set(updates)
-    .where(eq(categoryRules.id, id))
-    .returning();
+  try {
+    const db = await getDb();
+    const [updated] = await db
+      .update(categoryRules)
+      .set(updates)
+      .where(eq(categoryRules.id, id))
+      .returning();
 
-  if (!updated) {
-    return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    if (!updated) {
+      return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err) {
+    console.error({ action: "category_rule_update_failed", code: (err as NodeJS.ErrnoException).code });
+    return NextResponse.json({ error: "שגיאה פנימית", code: "INTERNAL_ERROR" }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, data: updated });
 }
 
 export async function DELETE(
@@ -97,15 +102,20 @@ export async function DELETE(
     return NextResponse.json({ error: "מזהה לא תקין", code: "INVALID_ID" }, { status: 400 });
   }
 
-  const db = await getDb();
-  const [deleted] = await db
-    .delete(categoryRules)
-    .where(eq(categoryRules.id, id))
-    .returning();
+  try {
+    const db = await getDb();
+    const [deleted] = await db
+      .delete(categoryRules)
+      .where(eq(categoryRules.id, id))
+      .returning();
 
-  if (!deleted) {
-    return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    if (!deleted) {
+      return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error({ action: "category_rule_delete_failed", code: (err as NodeJS.ErrnoException).code });
+    return NextResponse.json({ error: "שגיאה פנימית", code: "INTERNAL_ERROR" }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, data: null });
 }

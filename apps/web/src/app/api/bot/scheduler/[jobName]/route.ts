@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
-import type { SchedulerJob, SchedulerJobName, SchedulerJobStatus } from "@finance-bot/types";
+import type { SchedulerJob, ScrapeStatus } from "@finance-bot/types";
 
 const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
 type KnownJob = typeof KNOWN_JOBS[number];
@@ -49,32 +49,32 @@ export async function PUT(
   const { enabled } = body as { enabled: boolean };
   const now = new Date();
 
-  const db = await getDb();
-  await db
-    .update(schedulerState)
-    .set({ enabled, updatedAt: now })
-    .where(eq(schedulerState.jobName, jobName));
+  try {
+    const db = await getDb();
+    const [updated] = await db
+      .update(schedulerState)
+      .set({ enabled, updatedAt: now })
+      .where(eq(schedulerState.jobName, jobName))
+      .returning();
 
-  const rows = await db
-    .select()
-    .from(schedulerState)
-    .where(eq(schedulerState.jobName, jobName));
+    if (!updated) {
+      return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+    }
 
-  if (rows.length === 0) {
-    return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+    const data: SchedulerJob = {
+      jobName: updated.jobName,
+      enabled: updated.enabled,
+      cronExpression: updated.cronExpression,
+      lastRunAt: updated.lastRunAt,
+      lastStatus: updated.lastStatus as ScrapeStatus | null,
+      lastError: updated.lastError,
+      nextRunAt: updated.nextRunAt,
+      updatedAt: updated.updatedAt,
+    };
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    console.error({ action: 'scheduler_update_failed', jobName, code: (err as NodeJS.ErrnoException).code });
+    return NextResponse.json({ error: 'שגיאה פנימית', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
-
-  const row = rows[0];
-  const data: SchedulerJob = {
-    jobName: row.jobName as SchedulerJobName,
-    enabled: row.enabled,
-    cronExpression: row.cronExpression,
-    lastRunAt: row.lastRunAt,
-    lastStatus: row.lastStatus as SchedulerJobStatus | null,
-    lastError: row.lastError,
-    nextRunAt: row.nextRunAt,
-    updatedAt: row.updatedAt,
-  };
-
-  return NextResponse.json({ success: true, data });
 }
