@@ -3,8 +3,12 @@ import { eq } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
 import { allowedUsers } from '@finance-bot/db/schema';
 import type { BotContext } from '../types.js';
+import { logger } from '../lib/logger.js';
 
-const AUTH_LASTSEEN_INTERVAL_MS = Number(process.env.AUTH_LASTSEEN_INTERVAL_MS ?? 300_000);
+const _rawInterval = Number(process.env.AUTH_LASTSEEN_INTERVAL_MS);
+const AUTH_LASTSEEN_INTERVAL_MS = Number.isFinite(_rawInterval) && _rawInterval >= 0
+  ? _rawInterval
+  : 300_000;
 
 // telegramId → timestamp of last lastSeenAt DB write
 const lastSeenCache = new Map<string, number>();
@@ -23,7 +27,7 @@ export const authMiddleware: MiddlewareFn<BotContext> = async (ctx, next) => {
     .get();
 
   if (!user || !user.isActive) {
-    console.error(`[auth] unauthorized access from chat_id=${telegramId}`);
+    logger.warn({ action: 'auth_unauthorized', telegramId });
     return;
   }
 
@@ -42,7 +46,7 @@ export const authMiddleware: MiddlewareFn<BotContext> = async (ctx, next) => {
           .run();
       })
       .catch((err: Error) => {
-        console.error('[auth] lastseen_update_failed', telegramId, err.message);
+        logger.error({ action: 'lastseen_update_failed', telegramId, errorMessage: err.message });
       });
   }
 

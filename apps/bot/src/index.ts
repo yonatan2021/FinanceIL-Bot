@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'development') {
     } catch (err) {
       if (method === 'sendMessage' || method === 'editMessageText') {
         const text = (payload as Record<string, unknown>)['text'];
-        console.error('[MarkdownV2 ERROR] method:', method, 'text:', String(text ?? '').slice(0, 200));
+        logger.error({ action: 'markdownv2_error', method, textPreview: String(text ?? '').slice(0, 200) });
       }
       throw err;
     }
@@ -81,7 +81,7 @@ await bot.api.setMyCommands([
   { command: 'status', description: 'Dashboard מהיר' },
   { command: 'recent', description: '5 עסקאות אחרונות' },
 ]);
-console.error('[bot] commands registered');
+logger.info({ action: 'commands_registered' });
 
 bot.start();
-console.error('[bot] polling started');
+logger.info({ action: 'polling_started' });

@@ -6,8 +6,10 @@ import { escapeMarkdownV2 } from '@finance-bot/utils/markdown';
 import { backToMenuKeyboard } from '../keyboards.js';
 import { formatDateHE } from '@finance-bot/utils/dates';
 import type { Transaction } from '@finance-bot/types';
+import { logger } from '../lib/logger.js';
 
-const SEARCH_MAX_RESULTS = Number(process.env.SEARCH_MAX_RESULTS ?? 20);
+const _rawMax = Number(process.env.SEARCH_MAX_RESULTS);
+const SEARCH_MAX_RESULTS = Number.isInteger(_rawMax) && _rawMax > 0 ? _rawMax : 20;
 const MAX_MESSAGE_LENGTH = 3800;
 
 export const searchHandlers = new Composer<BotContext>();
@@ -34,7 +36,7 @@ searchHandlers.callbackQuery('menu:search', async (ctx) => {
       reply_markup: kb,
     });
   } catch (err) {
-    console.error('[search] failed to load categories:', err);
+    logger.error({ action: 'search_categories_load_failed', errorMessage: (err as Error).message });
     await ctx.reply('שגיאה בטעינת הקטגוריות. נסה שוב מאוחר יותר.').catch(() => {});
   }
 });
@@ -64,7 +66,7 @@ searchHandlers.callbackQuery(/^search:category:(.+)$/, async (ctx) => {
 
     await ctx.editMessageText(text, { reply_markup: backToMenuKeyboard() });
   } catch (err) {
-    console.error('[search] category search failed:', err);
+    logger.error({ action: 'search_category_failed', errorMessage: (err as Error).message });
     await ctx.reply('שגיאה בחיפוש. נסה שוב מאוחר יותר.').catch(() => {});
   }
 });
@@ -85,7 +87,7 @@ searchHandlers.callbackQuery('menu:export', async (ctx) => {
       { caption: '✅ קובץ הייצוא של עסקאות' }
     );
   } catch (err) {
-    console.error('[export] failed to generate or send CSV:', err);
+    logger.error({ action: 'export_csv_failed', errorMessage: (err as Error).message });
     await ctx.reply('שגיאה ביצירת הקובץ. נסה שוב מאוחר יותר.').catch(() => {});
   }
 });

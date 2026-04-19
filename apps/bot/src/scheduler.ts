@@ -15,15 +15,17 @@ import {
   formatSummaryMessage,
 } from './formatters.js';
 import { buildSpending } from './helpers.js';
+import { logger } from './lib/logger.js';
 
-const SCHEDULER_SEND_DELAY_MS = Number(process.env.SCHEDULER_SEND_DELAY_MS ?? 50);
+const _rawDelay = Number(process.env.SCHEDULER_SEND_DELAY_MS);
+const SCHEDULER_SEND_DELAY_MS = Number.isFinite(_rawDelay) && _rawDelay >= 0 ? _rawDelay : 50;
 
 async function sendToAll(bot: Bot<BotContext>, telegramIds: string[], message: string): Promise<void> {
   for (const id of telegramIds) {
     try {
       await bot.api.sendMessage(id, message);
     } catch (err) {
-      console.error(`[scheduler] failed to send to ${id}:`, (err as Error).message);
+      logger.error({ action: 'scheduler_send_failed', telegramId: id, errorMessage: (err as Error).message });
     }
     await new Promise<void>((resolve) => setTimeout(resolve, SCHEDULER_SEND_DELAY_MS));
   }
@@ -68,17 +70,17 @@ async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
 
 export function startScheduler(bot: Bot<BotContext>): ScheduledTask[] {
   const daily = cron.schedule('0 8 * * *', () => {
-    sendDailyBudgetAlerts(bot).catch((err) => console.error('[scheduler] daily alert error:', err));
+    sendDailyBudgetAlerts(bot).catch((err) => logger.error({ action: 'daily_alert_failed', errorMessage: (err as Error).message }));
   }, { timezone: 'Asia/Jerusalem' });
 
   const weekly = cron.schedule('0 8 * * 0', () => {
-    sendWeeklySummary(bot).catch((err) => console.error('[scheduler] weekly summary error:', err));
+    sendWeeklySummary(bot).catch((err) => logger.error({ action: 'weekly_summary_failed', errorMessage: (err as Error).message }));
   }, { timezone: 'Asia/Jerusalem' });
 
   const monthly = cron.schedule('0 8 1 * *', () => {
-    sendMonthlySummary(bot).catch((err) => console.error('[scheduler] monthly summary error:', err));
+    sendMonthlySummary(bot).catch((err) => logger.error({ action: 'monthly_summary_failed', errorMessage: (err as Error).message }));
   }, { timezone: 'Asia/Jerusalem' });
 
-  console.error('[scheduler] cron jobs registered (daily alerts, weekly & monthly summaries)');
+  logger.info({ action: 'scheduler_registered', jobs: ['daily_alerts', 'weekly_summary', 'monthly_summary'] });
   return [daily, weekly, monthly];
 }

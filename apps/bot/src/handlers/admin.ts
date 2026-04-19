@@ -3,6 +3,7 @@ import type { BotContext } from '../types.js';
 import { getAllUsers, getLatestScrapeLog } from '../queries.js';
 import { formatUsersMessage, formatScrapeLogMessage } from '../formatters.js';
 import { adminMenuKeyboard } from '../keyboards.js';
+import { logger } from '../lib/logger.js';
 
 export const adminHandlers = new Composer<BotContext>();
 
@@ -26,14 +27,14 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      console.error(`[admin] scraper API returned ${res.status}:`, body);
+      logger.error({ action: 'scraper_api_error', status: res.status, body });
     }
     const resultText = res.ok
       ? '✅ הסקרייפר הושלם בהצלחה.'
       : `❌ שגיאה: סטטוס ${res.status}`;
     await ctx.editMessageText(`🔄 ${resultText}`, { reply_markup: adminMenuKeyboard() });
   } catch (err) {
-    console.error('[admin] scraper trigger failed:', err);
+    logger.error({ action: 'scraper_trigger_failed', errorMessage: (err as Error).message });
     await ctx.editMessageText('❌ שגיאת חיבור לשרת.', { reply_markup: adminMenuKeyboard() });
   }
 });

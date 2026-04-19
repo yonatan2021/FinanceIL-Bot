@@ -1,5 +1,6 @@
 import type { Bot } from 'grammy';
 import { getAdminUsers } from './queries.js';
+import { logger } from './lib/logger.js';
 
 async function sendToAdmins(bot: Bot, message: string): Promise<void> {
   const admins = getAdminUsers();
@@ -7,7 +8,7 @@ async function sendToAdmins(bot: Bot, message: string): Promise<void> {
     try {
       await bot.api.sendMessage(admin.telegramId, message, { parse_mode: 'MarkdownV2' });
     } catch (err) {
-      console.error(`[notify] failed to reach admin ${admin.telegramId}:`, err);
+      logger.error({ action: 'notify_admin_failed', telegramId: admin.telegramId, errorMessage: (err as Error).message });
     }
   }
 }
