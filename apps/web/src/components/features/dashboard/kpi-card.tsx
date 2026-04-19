@@ -1,5 +1,4 @@
 import { type LucideIcon } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type KpiVariant = "balance" | "income" | "expense" | "net-positive" | "net-negative";
@@ -14,30 +13,35 @@ interface KpiCardProps {
 
 const VARIANT_STYLES: Record<
   KpiVariant,
-  { iconContainer: string; icon: string; value: string }
+  { topBorder: string; iconContainer: string; icon: string; value: string }
 > = {
   balance: {
-    iconContainer: "bg-blue-50",
+    topBorder: "border-t-2 border-t-blue-400",
+    iconContainer: "bg-blue-50 ring-1 ring-blue-100",
     icon: "text-blue-600",
     value: "text-slate-900",
   },
   income: {
-    iconContainer: "bg-emerald-50",
+    topBorder: "border-t-2 border-t-emerald-400",
+    iconContainer: "bg-emerald-50 ring-1 ring-emerald-100",
     icon: "text-emerald-600",
     value: "text-emerald-700",
   },
   expense: {
-    iconContainer: "bg-red-50",
+    topBorder: "border-t-2 border-t-red-400",
+    iconContainer: "bg-red-50 ring-1 ring-red-100",
     icon: "text-red-500",
     value: "text-red-600",
   },
   "net-positive": {
-    iconContainer: "bg-emerald-50",
+    topBorder: "border-t-2 border-t-emerald-400",
+    iconContainer: "bg-emerald-50 ring-1 ring-emerald-100",
     icon: "text-emerald-600",
     value: "text-emerald-700",
   },
   "net-negative": {
-    iconContainer: "bg-red-50",
+    topBorder: "border-t-2 border-t-red-400",
+    iconContainer: "bg-red-50 ring-1 ring-red-100",
     icon: "text-red-500",
     value: "text-red-600",
   },
@@ -53,29 +57,31 @@ export function KpiCard({
   const styles = VARIANT_STYLES[variant];
 
   return (
-    <Card className="border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <p className="text-sm font-medium text-slate-500 truncate">{title}</p>
-            <p
-              className={cn(
-                "text-2xl font-bold tabular-nums leading-none",
-                styles.value
-              )}
-              dir="ltr"
-            >
-              {formattedValue}
-            </p>
-            {subtitle && (
-              <p className="text-xs text-slate-400">{subtitle}</p>
-            )}
-          </div>
-          <div className={cn("p-2.5 rounded-xl shrink-0", styles.iconContainer)}>
-            <Icon className={cn("h-5 w-5", styles.icon)} aria-hidden="true" />
-          </div>
+    <div
+      className={cn(
+        "bg-white rounded-xl border border-slate-200/80 p-5",
+        "hover:shadow-md transition-shadow duration-200",
+        styles.topBorder
+      )}
+      style={{ boxShadow: "var(--shadow-sm)" }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium text-slate-500 truncate">{title}</p>
+          <p
+            className={cn("text-2xl font-bold tabular-nums leading-none", styles.value)}
+            dir="ltr"
+          >
+            {formattedValue}
+          </p>
+          {subtitle && (
+            <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className={cn("p-2.5 rounded-xl shrink-0 mt-0.5", styles.iconContainer)}>
+          <Icon className={cn("h-5 w-5", styles.icon)} aria-hidden="true" />
+        </div>
+      </div>
+    </div>
   );
 }
