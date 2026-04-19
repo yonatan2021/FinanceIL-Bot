@@ -44,11 +44,12 @@ function StatusPill({ status }: { status: string | null }) {
 export default function SchedulerPage() {
   const { jobs, error, mutate } = useScheduler();
   const [toggling, setToggling] = useState<Set<string>>(new Set());
+  const [togglingsilent, setTogglingsilent] = useState<Set<string>>(new Set());
 
   const handleToggle = async (jobName: string, currentEnabled: boolean) => {
     setToggling((prev) => new Set(prev).add(jobName));
     try {
-      const updatedJob = await updateSchedulerJob(jobName, !currentEnabled);
+      const updatedJob = await updateSchedulerJob(jobName, { enabled: !currentEnabled });
       await mutate((prev) =>
         prev === undefined
           ? undefined
@@ -62,6 +63,30 @@ export default function SchedulerPage() {
       toast.error(err instanceof Error ? err.message : 'שגיאה בעדכון המשרה');
     } finally {
       setToggling((prev) => {
+        const next = new Set(prev);
+        next.delete(jobName);
+        return next;
+      });
+    }
+  };
+
+  const handleSilentToggle = async (jobName: string, currentSilent: boolean) => {
+    setTogglingsilent((prev) => new Set(prev).add(jobName));
+    try {
+      const updatedJob = await updateSchedulerJob(jobName, { silentNotifications: !currentSilent });
+      await mutate((prev) =>
+        prev === undefined
+          ? undefined
+          : prev.map((j): SchedulerJob =>
+              j.jobName === jobName ? { ...j, silentNotifications: updatedJob.silentNotifications } : j
+            ),
+        { revalidate: false }
+      );
+      toast.success('עודכן');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'שגיאה בעדכון המשרה');
+    } finally {
+      setTogglingsilent((prev) => {
         const next = new Set(prev);
         next.delete(jobName);
         return next;
@@ -84,7 +109,7 @@ export default function SchedulerPage() {
             </button>
           </div>
         ) : jobs === null ? (
-          <TableSkeleton rows={3} cols={6} />
+          <TableSkeleton rows={3} cols={7} />
         ) : (
           <div className="rounded-md border bg-white">
             <Table>
@@ -96,6 +121,7 @@ export default function SchedulerPage() {
                   <TableHead className="text-right">ריצה אחרונה</TableHead>
                   <TableHead className="text-right">ריצה הבאה</TableHead>
                   <TableHead className="text-right">מופעל</TableHead>
+                  <TableHead className="text-right">הודעה שקטה</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -122,6 +148,14 @@ export default function SchedulerPage() {
                         disabled={toggling.has(job.jobName)}
                         onCheckedChange={() => void handleToggle(job.jobName, job.enabled)}
                         aria-label={`הפעל / כבה: ${JOB_NAME_HE[job.jobName] ?? job.jobName}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={job.silentNotifications}
+                        disabled={togglingsilent.has(job.jobName)}
+                        onCheckedChange={() => void handleSilentToggle(job.jobName, job.silentNotifications)}
+                        aria-label={`הודעה שקטה: ${JOB_NAME_HE[job.jobName] ?? job.jobName}`}
                       />
                     </TableCell>
                   </TableRow>

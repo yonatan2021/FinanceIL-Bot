@@ -34,26 +34,43 @@ export async function PUT(
   }
 
   const body: unknown = await req.json().catch(() => null);
+
+  const isObject = body !== null && typeof body === 'object';
+  const bodyRecord = isObject ? (body as Record<string, unknown>) : {};
+  const hasEnabled = 'enabled' in bodyRecord;
+  const hasSilentNotifications = 'silentNotifications' in bodyRecord;
+
   if (
-    body === null ||
-    typeof body !== 'object' ||
-    !('enabled' in body) ||
-    typeof (body as Record<string, unknown>).enabled !== 'boolean'
+    !isObject ||
+    (!hasEnabled && !hasSilentNotifications) ||
+    (hasEnabled && typeof bodyRecord.enabled !== 'boolean') ||
+    (hasSilentNotifications && typeof bodyRecord.silentNotifications !== 'boolean')
   ) {
     return NextResponse.json(
-      { error: 'Body must be { enabled: boolean }', code: 'INVALID_PARAMS' },
+      {
+        error: 'Body must include at least one of { enabled: boolean, silentNotifications: boolean }',
+        code: 'INVALID_PARAMS',
+      },
       { status: 400 },
     );
   }
 
-  const { enabled } = body as { enabled: boolean };
   const now = new Date();
+
+  type SchedulerUpdate = {
+    updatedAt: Date;
+    enabled?: boolean;
+    silentNotifications?: boolean;
+  };
+  const updateFields: SchedulerUpdate = { updatedAt: now };
+  if (hasEnabled) updateFields.enabled = bodyRecord.enabled as boolean;
+  if (hasSilentNotifications) updateFields.silentNotifications = bodyRecord.silentNotifications as boolean;
 
   try {
     const db = await getDb();
     const [updated] = await db
       .update(schedulerState)
-      .set({ enabled, updatedAt: now })
+      .set(updateFields)
       .where(eq(schedulerState.jobName, jobName))
       .returning();
 

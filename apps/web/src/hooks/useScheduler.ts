@@ -13,12 +13,12 @@ export function useScheduler() {
 
 export async function updateSchedulerJob(
   jobName: string,
-  enabled: boolean
+  fields: Partial<Pick<SchedulerJob, 'enabled' | 'silentNotifications'>>
 ): Promise<SchedulerJob> {
   const res = await fetch(`/api/bot/scheduler/${encodeURIComponent(jobName)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enabled }),
+    body: JSON.stringify(fields),
   });
   const json = (await res.json()) as { success: boolean; data?: SchedulerJob; error?: string };
   if (!json.success || !json.data) {
