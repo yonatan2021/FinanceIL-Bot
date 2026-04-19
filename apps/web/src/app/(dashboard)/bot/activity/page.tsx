@@ -65,7 +65,7 @@ export default function BotActivityPage() {
 
         {isLoading && <TableSkeleton rows={5} cols={4} />}
 
-        {!isLoading && !error && data && (
+        {!isLoading && !error && data?.meta && (
           <>
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
