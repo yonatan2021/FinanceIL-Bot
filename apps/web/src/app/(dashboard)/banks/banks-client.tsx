@@ -34,7 +34,7 @@ function toDialogCredential(cred: SafeCredential): CredentialForDialog {
 }
 
 export function BanksClient() {
-  const { credentials: creds, mutate } = useCredentials();
+  const { credentials: creds, isError, errorMessage, mutate } = useCredentials();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SafeCredential | null>(null);
 
@@ -45,6 +45,14 @@ export function BanksClient() {
   async function handleDeleteSuccess() {
     setDeleteTarget(null);
     await mutate();
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 text-sm text-red-500 dark:text-red-400">
+        {errorMessage ?? "שגיאה בטעינת הנתונים. אנא רענן את הדף."}
+      </div>
+    );
   }
 
   return (

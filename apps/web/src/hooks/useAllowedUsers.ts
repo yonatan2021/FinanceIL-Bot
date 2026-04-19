@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { fetcher, ApiError } from "@/lib/fetcher";
 
 export interface AllowedUser {
   id: string;
@@ -14,5 +14,11 @@ export function useAllowedUsers() {
     "/api/users",
     fetcher
   );
-  return { users: data ?? [], error, isLoading, mutate };
+  return {
+    users: data ?? [],
+    isLoading,
+    isError: !!error,
+    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
+    mutate,
+  };
 }

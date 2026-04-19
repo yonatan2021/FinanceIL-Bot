@@ -12,9 +12,9 @@ import { useScrapeLogs } from "@/hooks/useScrapeLogs";
 import { TableSkeleton } from "@/components/ui/page-skeleton";
 
 export default function BotOverviewPage() {
-  const { status, error: statusError, isLoading: statusLoading } = useBotStatus();
+  const { status, isError: statusError, errorMessage: statusErrorMessage, isLoading: statusLoading } = useBotStatus();
   const { health } = useBotHealth();
-  const { logs: recentLogs, error: logsError, isLoading: logsLoading, mutate: mutateLogs } = useScrapeLogs(3);
+  const { logs: recentLogs, isError: logsError, errorMessage: logsErrorMessage, isLoading: logsLoading, mutate: mutateLogs } = useScrapeLogs(3);
   const [scrapeLoading, setScrapeLoading] = useState(false);
 
   const handleScrape = async () => {
@@ -44,7 +44,7 @@ export default function BotOverviewPage() {
           <h2 className="font-semibold text-base">סטטוס בוט</h2>
           {statusError ? (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
-              שגיאה בטעינת הנתונים.
+              {statusErrorMessage ?? "שגיאה בטעינת הנתונים."}
             </div>
           ) : statusLoading || status === null ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -138,7 +138,7 @@ export default function BotOverviewPage() {
           </div>
           {logsError ? (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
-              שגיאה בטעינת לוגים.
+              {logsErrorMessage ?? "שגיאה בטעינת לוגים."}
             </div>
           ) : logsLoading ? (
             <TableSkeleton rows={3} cols={3} />

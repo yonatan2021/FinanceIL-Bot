@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { fetcher, ApiError } from "@/lib/fetcher";
 import type { SchedulerJob } from "@finance-bot/types";
 
 export function useScheduler() {
@@ -8,7 +8,13 @@ export function useScheduler() {
     fetcher,
     { refreshInterval: 60_000 }
   );
-  return { jobs: data ?? null, error, isLoading, mutate };
+  return {
+    jobs: data ?? null,
+    isLoading,
+    isError: !!error,
+    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
+    mutate,
+  };
 }
 
 export async function updateSchedulerJob(

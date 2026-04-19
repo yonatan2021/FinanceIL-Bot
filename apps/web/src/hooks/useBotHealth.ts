@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { fetcher, ApiError } from "@/lib/fetcher";
 
 export interface BotHealthData {
   id: number;
@@ -19,5 +19,11 @@ export function useBotHealth() {
     { refreshInterval: 15_000 }
   );
   // isLoading=true → undefined (initial), isLoading=false+no error → data (may be null)
-  return { health: isLoading ? undefined : (data ?? null), error, isLoading, mutate };
+  return {
+    health: isLoading ? undefined : (data ?? null),
+    isLoading,
+    isError: !!error,
+    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
+    mutate,
+  };
 }

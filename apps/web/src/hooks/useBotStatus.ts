@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { fetcher, ApiError } from "@/lib/fetcher";
 
 export interface BotStatus {
   ok: boolean;
@@ -14,5 +14,11 @@ export function useBotStatus() {
     fetcher,
     { refreshInterval: 30_000 }
   );
-  return { status: data ?? null, error, isLoading, mutate };
+  return {
+    status: data ?? null,
+    isLoading,
+    isError: !!error,
+    errorMessage: error instanceof ApiError ? error.message : error ? "שגיאה לא ידועה" : undefined,
+    mutate,
+  };
 }

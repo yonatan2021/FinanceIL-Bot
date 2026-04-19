@@ -25,7 +25,7 @@ import type { AllowedUser } from "@/hooks/useAllowedUsers";
 import { useBroadcastStore } from "@/stores/useBroadcastStore";
 
 export default function BotMessagesPage() {
-  const { users } = useAllowedUsers();
+  const { users, isError: usersError, errorMessage: usersErrorMessage } = useAllowedUsers();
   const { draftMessage, target, setDraftMessage, setTarget, clear } = useBroadcastStore();
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AllowedUser | null>(null);
@@ -126,6 +126,11 @@ export default function BotMessagesPage() {
         {/* Direct message section */}
         <section className="rounded-lg border bg-white p-5 space-y-4">
           <h2 className="font-semibold text-base">שליחת הודעה ישירה</h2>
+          {usersError && (
+            <div className="p-4 text-sm text-red-500 dark:text-red-400">
+              {usersErrorMessage ?? "שגיאה בטעינת הנתונים. אנא רענן את הדף."}
+            </div>
+          )}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
