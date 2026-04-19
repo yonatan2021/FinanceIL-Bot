@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { categoryRules } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { isValidRegex } from "@finance-bot/utils/regex";
 
 const UpdateRuleSchema = z.object({
   categoryName: z.string().min(1).optional(),
@@ -14,20 +15,6 @@ const UpdateRuleSchema = z.object({
   priority: z.number().int().optional(),
   isActive: z.boolean().optional(),
 });
-
-function isValidRegex(pattern: string): boolean {
-  try {
-    new RegExp(pattern);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function parseId(idStr: string): number | null {
-  const id = parseInt(idStr, 10);
-  return isNaN(id) ? null : id;
-}
 
 export async function PUT(
   req: Request,
@@ -39,10 +26,11 @@ export async function PUT(
   }
 
   const { id: idStr } = await params;
-  const id = parseId(idStr);
-  if (id === null) {
+  const idResult = z.coerce.number().int().positive().safeParse(idStr);
+  if (!idResult.success) {
     return NextResponse.json({ error: "מזהה לא תקין", code: "INVALID_ID" }, { status: 400 });
   }
+  const id = idResult.data;
 
   let body: unknown;
   try {
@@ -68,18 +56,23 @@ export async function PUT(
     );
   }
 
-  const db = await getDb();
-  const [updated] = await db
-    .update(categoryRules)
-    .set(updates)
-    .where(eq(categoryRules.id, id))
-    .returning();
+  try {
+    const db = await getDb();
+    const [updated] = await db
+      .update(categoryRules)
+      .set(updates)
+      .where(eq(categoryRules.id, id))
+      .returning();
 
-  if (!updated) {
-    return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    if (!updated) {
+      return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("[categories/rules PUT] DB error:", (err as Error).message);
+    return NextResponse.json({ error: "שגיאת מסד נתונים", code: "DB_ERROR" }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, data: updated });
 }
 
 export async function DELETE(
@@ -92,20 +85,26 @@ export async function DELETE(
   }
 
   const { id: idStr } = await params;
-  const id = parseId(idStr);
-  if (id === null) {
+  const idResult = z.coerce.number().int().positive().safeParse(idStr);
+  if (!idResult.success) {
     return NextResponse.json({ error: "מזהה לא תקין", code: "INVALID_ID" }, { status: 400 });
   }
+  const id = idResult.data;
 
-  const db = await getDb();
-  const [deleted] = await db
-    .delete(categoryRules)
-    .where(eq(categoryRules.id, id))
-    .returning();
+  try {
+    const db = await getDb();
+    const [deleted] = await db
+      .delete(categoryRules)
+      .where(eq(categoryRules.id, id))
+      .returning();
 
-  if (!deleted) {
-    return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    if (!deleted) {
+      return NextResponse.json({ error: "כלל לא נמצא", code: "NOT_FOUND" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: null });
+  } catch (err) {
+    console.error("[categories/rules DELETE] DB error:", (err as Error).message);
+    return NextResponse.json({ error: "שגיאת מסד נתונים", code: "DB_ERROR" }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, data: null });
 }

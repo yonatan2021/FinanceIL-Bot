@@ -15,6 +15,10 @@
     "./markdown": {
       "import": "./dist/markdown.js",
       "types": "./dist/markdown.d.ts"
+    },
+    "./regex": {
+      "import": "./dist/regex.js",
+      "types": "./dist/regex.d.ts"
     }
   },
   "scripts": {
