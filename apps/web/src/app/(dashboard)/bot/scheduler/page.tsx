@@ -44,7 +44,7 @@ function StatusPill({ status }: { status: string | null }) {
 export default function SchedulerPage() {
   const { jobs, error, mutate } = useScheduler();
   const [toggling, setToggling] = useState<Set<string>>(new Set());
-  const [togglingsilent, setTogglingsilent] = useState<Set<string>>(new Set());
+  const [togglingSilent, setTogglingSilent] = useState<Set<string>>(new Set());
 
   const handleToggle = async (jobName: string, currentEnabled: boolean) => {
     setToggling((prev) => new Set(prev).add(jobName));
@@ -60,6 +60,7 @@ export default function SchedulerPage() {
       );
       toast.success('עודכן');
     } catch (err) {
+      await mutate(); // revalidate to restore true server state
       toast.error(err instanceof Error ? err.message : 'שגיאה בעדכון המשרה');
     } finally {
       setToggling((prev) => {
@@ -71,7 +72,7 @@ export default function SchedulerPage() {
   };
 
   const handleSilentToggle = async (jobName: string, currentSilent: boolean) => {
-    setTogglingsilent((prev) => new Set(prev).add(jobName));
+    setTogglingSilent((prev) => new Set(prev).add(jobName));
     try {
       const updatedJob = await updateSchedulerJob(jobName, { silentNotifications: !currentSilent });
       await mutate((prev) =>
@@ -84,9 +85,10 @@ export default function SchedulerPage() {
       );
       toast.success('עודכן');
     } catch (err) {
+      await mutate(); // revalidate to restore true server state
       toast.error(err instanceof Error ? err.message : 'שגיאה בעדכון המשרה');
     } finally {
-      setTogglingsilent((prev) => {
+      setTogglingSilent((prev) => {
         const next = new Set(prev);
         next.delete(jobName);
         return next;
@@ -153,7 +155,7 @@ export default function SchedulerPage() {
                     <TableCell>
                       <Switch
                         checked={job.silentNotifications}
-                        disabled={togglingsilent.has(job.jobName)}
+                        disabled={togglingSilent.has(job.jobName)}
                         onCheckedChange={() => void handleSilentToggle(job.jobName, job.silentNotifications)}
                         aria-label={`הודעה שקטה: ${JOB_NAME_HE[job.jobName] ?? job.jobName}`}
                       />

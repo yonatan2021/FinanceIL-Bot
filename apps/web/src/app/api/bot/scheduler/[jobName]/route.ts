@@ -6,7 +6,8 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { schedulerState } from "@finance-bot/db/schema";
 import { eq } from "drizzle-orm";
-import type { SchedulerJob, ScrapeStatus } from "@finance-bot/types";
+import { z } from "zod";
+import type { SchedulerJob } from "@finance-bot/types";
 
 const KNOWN_JOBS = ['daily-budget-alerts', 'weekly-summary', 'monthly-report'] as const;
 type KnownJob = typeof KNOWN_JOBS[number];
@@ -15,59 +16,67 @@ function isKnownJob(value: string): value is KnownJob {
   return (KNOWN_JOBS as readonly string[]).includes(value);
 }
 
+const UpdateJobSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    silentNotifications: z.boolean().optional(),
+  })
+  .refine(
+    (d) => d.enabled !== undefined || d.silentNotifications !== undefined,
+    { message: 'Body must include at least one of { enabled: boolean, silentNotifications: boolean }' },
+  );
+
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ jobName: string }> },
 ): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
   }
 
   const { jobName } = await params;
 
   if (!isKnownJob(jobName)) {
     return NextResponse.json(
-      { error: 'Unknown job name', code: 'INVALID_PARAMS' },
+      { success: false, error: 'Unknown job name', code: 'INVALID_PARAMS' },
       { status: 400 },
     );
   }
 
-  const body: unknown = await req.json().catch(() => null);
+  const rawBody: unknown = await req.json().catch(() => null);
+  const parsed = UpdateJobSchema.safeParse(rawBody);
 
-  const isObject = body !== null && typeof body === 'object';
-  const bodyRecord = isObject ? (body as Record<string, unknown>) : {};
-  const hasEnabled = 'enabled' in bodyRecord;
-  const hasSilentNotifications = 'silentNotifications' in bodyRecord;
-
-  if (
-    !isObject ||
-    (!hasEnabled && !hasSilentNotifications) ||
-    (hasEnabled && typeof bodyRecord.enabled !== 'boolean') ||
-    (hasSilentNotifications && typeof bodyRecord.silentNotifications !== 'boolean')
-  ) {
+  if (!parsed.success) {
     return NextResponse.json(
       {
-        error: 'Body must include at least one of { enabled: boolean, silentNotifications: boolean }',
+        success: false,
+        error: parsed.error.issues[0]?.message ?? 'Invalid request body',
         code: 'INVALID_PARAMS',
       },
       { status: 400 },
     );
   }
 
-  const now = new Date();
-
-  type SchedulerUpdate = {
-    updatedAt: Date;
-    enabled?: boolean;
-    silentNotifications?: boolean;
-  };
-  const updateFields: SchedulerUpdate = { updatedAt: now };
-  if (hasEnabled) updateFields.enabled = bodyRecord.enabled as boolean;
-  if (hasSilentNotifications) updateFields.silentNotifications = bodyRecord.silentNotifications as boolean;
-
   try {
     const db = await getDb();
+
+    // Check existence before mutating — avoids a blind UPDATE on a non-existent row.
+    const existing = await db
+      .select()
+      .from(schedulerState)
+      .where(eq(schedulerState.jobName, jobName));
+
+    if (existing.length === 0) {
+      return NextResponse.json({ success: false, error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+    }
+
+    const updateFields: { updatedAt: Date; enabled?: boolean; silentNotifications?: boolean } = {
+      updatedAt: new Date(),
+    };
+    if (parsed.data.enabled !== undefined) updateFields.enabled = parsed.data.enabled;
+    if (parsed.data.silentNotifications !== undefined) updateFields.silentNotifications = parsed.data.silentNotifications;
+
     const [updated] = await db
       .update(schedulerState)
       .set(updateFields)
@@ -75,7 +84,7 @@ export async function PUT(
       .returning();
 
     if (!updated) {
-      return NextResponse.json({ error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Job not found', code: 'NOT_FOUND' }, { status: 404 });
     }
 
     const data: SchedulerJob = {
@@ -83,7 +92,7 @@ export async function PUT(
       enabled: updated.enabled,
       cronExpression: updated.cronExpression,
       lastRunAt: updated.lastRunAt,
-      lastStatus: updated.lastStatus as ScrapeStatus | null,
+      lastStatus: updated.lastStatus,
       lastError: updated.lastError,
       nextRunAt: updated.nextRunAt,
       updatedAt: updated.updatedAt,
@@ -93,6 +102,6 @@ export async function PUT(
     return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error({ action: 'scheduler_update_failed', jobName, code: (err as NodeJS.ErrnoException).code });
-    return NextResponse.json({ error: 'שגיאה פנימית', code: 'INTERNAL_ERROR' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'שגיאה פנימית', code: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }
