@@ -70,6 +70,7 @@ export async function PUT(
       lastError: updated.lastError,
       nextRunAt: updated.nextRunAt,
       updatedAt: updated.updatedAt,
+      silentNotifications: updated.silentNotifications,
     };
 
     return NextResponse.json({ success: true, data });
