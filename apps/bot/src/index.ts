@@ -19,7 +19,8 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 
 const bot = new Bot<BotContext>(token);
 
-// Handle Telegram 429 (Too Many Requests) and 500 errors automatically
+// Handle Telegram 429 and 5xx via @grammyjs/auto-retry (3 retries, exponential backoff).
+// The 50ms per-send delay in scheduler.ts provides additional headroom.
 bot.api.config.use(autoRetry());
 
 // Inject MarkdownV2 as default parse_mode for all API calls

@@ -33,7 +33,14 @@ function cached<T>(key: string, ttlMs: number, fn: () => T): T {
   return data;
 }
 
-/** Clear one cache key or the entire cache. Call after a scrape run. */
+/**
+ * Clear one cache entry by key, or flush all entries.
+ * Available keys: 'currentMonthTxns' | 'activeBudgets' | 'allAccountsWithBank' |
+ *   'totalBalance' | 'allUsers' | 'budgetCategories'
+ *
+ * Intended to be called after a successful scrape run. Not yet wired to the
+ * scraper pipeline — for now, data expires by TTL only.
+ */
 export function invalidateCache(key?: string): void {
   if (key !== undefined) {
     _cache.delete(key);
@@ -46,6 +53,9 @@ export function invalidateCache(key?: string): void {
 // Queries
 // ---------------------------------------------------------------------------
 
+// TTLs align to typical scrape frequency (~5 min). Financial data (30–120 s) expires
+// sooner because a scrape may update it at any time. User/category data (300 s) changes
+// rarely. Cache is per-process — web and bot do not share it.
 export function getAllAccountsWithBank(): AccountWithBank[] {
   return cached('allAccountsWithBank', 30_000, () =>
     db
@@ -130,8 +140,9 @@ export function getTransactionCount(): number {
 }
 
 /**
- * @param activeBudgets - Pass pre-fetched budgets to avoid re-querying (optional)
- * @param monthTxns - Pass pre-fetched transactions to avoid re-querying (optional)
+ * @param activeBudgets - Pre-fetched budgets. If provided, bypasses the cache
+ *   entirely — ensure data is fresh before passing. Omit to use cached results.
+ * @param monthTxns - Pre-fetched transactions. Same cache-bypass caveat as activeBudgets.
  */
 export function getBudgetAlertCount(
   activeBudgets?: Budget[],

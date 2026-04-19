@@ -10,7 +10,7 @@ const AUTH_LASTSEEN_INTERVAL_MS = Number.isFinite(_rawInterval) && _rawInterval 
   ? _rawInterval
   : 300_000;
 
-// telegramId → timestamp of last lastSeenAt DB write
+// In-process throttle cache. Safe because the bot runs as a single polling process.
 const lastSeenCache = new Map<string, number>();
 
 export const authMiddleware: MiddlewareFn<BotContext> = async (ctx, next) => {
