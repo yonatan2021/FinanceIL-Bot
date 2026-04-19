@@ -66,7 +66,6 @@ vi.mock('@finance-bot/db', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  invalidateCache();
   mockFrom.mockReturnValue(chainMock);
   mockWhere.mockReturnValue(chainMock);
   mockOrderBy.mockReturnValue(chainMock);

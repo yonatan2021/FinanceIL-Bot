@@ -178,13 +178,8 @@ export function getBudgetAlertCount(): number {
 }
 
 export function getTotalBalance(): number {
-  return cached('totalBalance', 30_000, () => {
-    const result = db
-      .select({ total: sql<number>`coalesce(sum(${accounts.balance}), 0)` })
-      .from(accounts)
-      .get();
-    return result?.total ?? 0;
-  });
+  const accounts = getAllAccountsWithBank();
+  return accounts.reduce((sum, a) => sum + a.balance, 0);
 }
 
 export function searchTransactions(options: {
@@ -239,14 +234,12 @@ export function getAllCategories() {
 }
 
 export function getBudgetCategories() {
-  return cached('budgetCategories', 300_000, () => {
-    const result = db
-      .select({ categoryName: budgets.categoryName })
-      .from(budgets)
-      .where(eq(budgets.isActive, true))
-      .all();
-    return result.map((r) => r.categoryName);
-  });
+  const result = db
+    .select({ categoryName: budgets.categoryName })
+    .from(budgets)
+    .where(eq(budgets.isActive, true))
+    .all();
+  return result.map((r) => r.categoryName);
 }
 
 export function invalidateAfterScrape(): void {
