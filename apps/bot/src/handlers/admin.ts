@@ -1,9 +1,11 @@
 import { Composer } from 'grammy';
 import type { BotContext } from '../types.js';
-import { getAllUsers, getLatestScrapeLog, invalidateAfterScrape } from '../queries.js';
+import { getAllUsers, getLatestScrapeLog } from '../queries.js';
 import { formatUsersMessage, formatScrapeLogMessage } from '../formatters.js';
 import { adminMenuKeyboard } from '../keyboards.js';
 import { logger } from '../lib/logger.js';
+import { db } from '@finance-bot/db';
+import { jobQueue } from '@finance-bot/db/schema';
 
 export const adminHandlers = new Composer<BotContext>();
 
@@ -16,37 +18,24 @@ adminHandlers.callbackQuery('admin:scraper', async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'אין הרשאה.', show_alert: true });
     return;
   }
-  await ctx.answerCallbackQuery({ text: 'מופעל...' });
+  await ctx.answerCallbackQuery({ text: 'בתור...' });
 
-  const secret = process.env.INTERNAL_API_SECRET;
-  if (!secret) {
-    logger.error({ action: 'scraper_trigger_aborted', reason: 'INTERNAL_API_SECRET_missing' });
-    await ctx.editMessageText('❌ שגיאת תצורה פנימית\\.', { reply_markup: adminMenuKeyboard() });
-    return;
-  }
+  const now = new Date();
+  db.insert(jobQueue).values({
+    type: 'scrape_all',
+    payload: JSON.stringify({ triggeredBy: 'admin' }),
+    status: 'pending',
+    runAfter: now,
+    attempts: 0,
+    maxAttempts: 3,
+    createdAt: now,
+  }).run();
 
-  await ctx.editMessageText('🔄 מפעיל סקרייפר...', { reply_markup: adminMenuKeyboard() });
-
-  try {
-    const webUrl = process.env.WEB_INTERNAL_URL ?? 'http://web:5200';
-    const res = await fetch(`${webUrl}/api/scrape`, {
-      method: 'POST',
-      headers: { 'x-internal-secret': secret },
-    });
-    if (!res.ok) {
-      logger.error({ action: 'scraper_api_failed', status: res.status });
-    }
-    if (res.ok) {
-      invalidateAfterScrape();
-    }
-    const resultText = res.ok
-      ? '✅ הסקרייפר הושלם בהצלחה.'
-      : `❌ שגיאה: סטטוס ${res.status}`;
-    await ctx.editMessageText(`🔄 ${resultText}`, { reply_markup: adminMenuKeyboard() });
-  } catch (err) {
-    logger.error({ action: 'scraper_trigger_failed', errorCode: (err as NodeJS.ErrnoException).code });
-    await ctx.editMessageText('❌ שגיאת חיבור לשרת.', { reply_markup: adminMenuKeyboard() });
-  }
+  logger.info({ action: 'scraper_job_enqueued', triggeredBy: ctx.user?.telegramId });
+  await ctx.editMessageText(
+    '🔄 הסקרייפר בתור לריצה\\. תקבל הודעה בסיום\\.',
+    { reply_markup: adminMenuKeyboard() },
+  );
 });
 
 adminHandlers.callbackQuery('admin:users', async (ctx) => {

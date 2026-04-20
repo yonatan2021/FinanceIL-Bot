@@ -132,7 +132,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed end-0 top-0 h-screen w-64 bg-white border-s border-slate-200/80 flex flex-col z-40"
+      className="fixed start-0 top-0 h-screen w-64 bg-white border-e border-slate-200/80 flex flex-col z-40"
       style={{ boxShadow: "var(--shadow-md)" }}
       aria-label="ניווט ראשי"
     >

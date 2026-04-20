@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
-import { allowedUsers } from "@finance-bot/db/schema";
+import { allowedUsers, outboxMessages } from "@finance-bot/db/schema";
 import { eq, and } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -28,14 +29,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const broadcastTarget = target === "admins" ? "admins" : "all";
 
-  const token = process.env.BOT_TOKEN;
-  if (!token) {
-    return NextResponse.json(
-      { success: false, error: "BOT_TOKEN not configured" },
-      { status: 500 }
-    );
-  }
-
   const db = await getDb();
   const users =
     broadcastTarget === "admins"
@@ -45,21 +38,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           .where(and(eq(allowedUsers.role, "admin"), eq(allowedUsers.isActive, true)))
       : await db.select().from(allowedUsers).where(eq(allowedUsers.isActive, true));
 
-  let sent = 0;
-  let failed = 0;
-  for (const user of users) {
-    try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: user.telegramId, text: message }),
-      });
-      if (res.ok) sent++;
-      else failed++;
-    } catch {
-      failed++;
-    }
+  if (users.length === 0) {
+    return NextResponse.json({ success: true, queued: 0 });
   }
 
-  return NextResponse.json({ success: true, sent, failed });
+  const batchId = randomUUID();
+  const now = new Date();
+  const rows = users.map((user) => ({
+    telegramId: user.telegramId,
+    text: message.trim(),
+    parseMode: "MarkdownV2",
+    disableNotification: false,
+    status: "pending" as const,
+    attempts: 0,
+    maxAttempts: 5,
+    sendAfter: now,
+    batchId,
+    createdAt: now,
+  }));
+
+  await db.insert(outboxMessages).values(rows);
+
+  return NextResponse.json({ success: true, queued: users.length, batchId });
 }
