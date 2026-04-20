@@ -109,3 +109,70 @@ export interface CategoryRule {
   isActive: boolean;
   createdAt: Date;
 }
+
+// Job queue types
+export type JobType = 'scrape_all' | 'scrape_credential' | 'broadcast_scheduled';
+export type JobStatus = 'pending' | 'running' | 'done' | 'failed' | 'dead';
+
+export interface ScrapeAllPayload {
+  triggeredBy: 'admin' | 'cron' | 'manual';
+}
+
+export interface ScrapeCredentialPayload {
+  credentialId: string;
+  triggeredBy: string;
+}
+
+export interface BroadcastScheduledPayload {
+  jobName: string;
+  messageKey: string;
+}
+
+export type JobPayloadMap = {
+  scrape_all: ScrapeAllPayload;
+  scrape_credential: ScrapeCredentialPayload;
+  broadcast_scheduled: BroadcastScheduledPayload;
+};
+
+export interface JobQueueEntry {
+  id: number;
+  type: JobType;
+  payload: string;
+  status: JobStatus;
+  runAfter: Date;
+  attempts: number;
+  maxAttempts: number;
+  correlationId: string | null;
+  createdAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  lastError: string | null;
+  result: string | null;
+}
+
+// Outbox message types
+export type OutboxStatus = 'pending' | 'sent' | 'failed' | 'dead';
+
+export interface OutboxMessage {
+  id: number;
+  telegramId: string;
+  text: string;
+  parseMode: string | null;
+  disableNotification: boolean | null;
+  replyMarkupJson: string | null;
+  status: OutboxStatus;
+  attempts: number;
+  maxAttempts: number;
+  sendAfter: Date;
+  batchId: string | null;
+  createdAt: Date;
+  sentAt: Date | null;
+  lastError: string | null;
+}
+
+export interface RateLimitBucket {
+  telegramId: string;
+  windowStart: Date;
+  requestCount: number;
+  updatedAt: Date;
+}

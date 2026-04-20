@@ -5,7 +5,7 @@ config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env')
 import { Bot, session } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { conversations, createConversation } from '@grammyjs/conversations';
-import { limit } from '@grammyjs/ratelimiter';
+import { sqliteRateLimit } from './middleware/sqliteRateLimit.js';
 import type { ScheduledTask } from 'node-cron';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
@@ -18,6 +18,8 @@ import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
 import { searchWizard } from './conversations/searchWizard.js';
 import { startScheduler } from './scheduler.js';
+import { startOutboxWorker } from './workers/outboxWorker.js';
+import { startJobWorker } from './workers/jobWorker.js';
 import { logger } from './lib/logger.js';
 
 const token = process.env.BOT_TOKEN;
@@ -54,7 +56,7 @@ if (process.env.NODE_ENV === 'development') {
 bot.use(session<SessionData, BotContext>({ initial: () => ({} as SessionData) }));
 bot.use(conversations());
 bot.use(createConversation(searchWizard));
-bot.use(limit({
+bot.use(sqliteRateLimit({
   timeFrame: 1000,
   limit: 1,
   onLimitExceeded: async (ctx) => {
@@ -85,9 +87,13 @@ bot.catch(async (err) => {
 });
 
 const schedulerTasks: ScheduledTask[] = startScheduler(bot);
+const outboxWorker = startOutboxWorker(bot);
+const jobWorker = startJobWorker(bot);
 
 const shutdown = async (): Promise<void> => {
   schedulerTasks.forEach((t) => t.stop());
+  outboxWorker.stop();
+  jobWorker.stop();
   await bot.stop();
 };
 process.once('SIGINT', () => void shutdown());

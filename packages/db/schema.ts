@@ -128,3 +128,56 @@ export const categoryRules = sqliteTable('category_rules', {
   isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+// Async job queue — SQLite-backed, no Redis required
+// type: 'scrape_all' | 'scrape_credential' | 'broadcast_scheduled'
+// correlationId: credentialId for scrape_credential; batchId (UUID) for broadcast_scheduled
+export const jobQueue = sqliteTable('job_queue', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  type: text('type').notNull(),
+  payload: text('payload').notNull().default('{}'),
+  status: text('status').notNull().default('pending'),
+  runAfter: integer('run_after', { mode: 'timestamp' }).notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  correlationId: text('correlation_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+  result: text('result'),
+}, (table) => ({
+  idxJobQueueStatus: index('idx_job_queue_status').on(table.status, table.runAfter),
+  idxJobQueueType: index('idx_job_queue_type').on(table.type, table.createdAt),
+}));
+
+// Persistent outbox for Telegram messages — survives bot restart, enables batch broadcast
+// batchId groups all messages from one broadcast/scheduled job (UUID)
+export const outboxMessages = sqliteTable('outbox_messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  telegramId: text('telegram_id').notNull(),
+  text: text('text').notNull(),
+  parseMode: text('parse_mode').default('MarkdownV2'),
+  disableNotification: integer('disable_notification', { mode: 'boolean' }).default(false),
+  replyMarkupJson: text('reply_markup_json'),
+  status: text('status').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(5),
+  sendAfter: integer('send_after', { mode: 'timestamp' }).notNull(),
+  batchId: text('batch_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  sentAt: integer('sent_at', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+}, (table) => ({
+  idxOutboxStatus: index('idx_outbox_status').on(table.status, table.sendAfter),
+  idxOutboxBatch: index('idx_outbox_batch').on(table.batchId),
+}));
+
+// Persisted rate limit buckets — replaces in-memory Map (survives restart)
+// One row per telegramId; expires automatically via outbox worker cleanup
+export const rateLimitBuckets = sqliteTable('rate_limit_buckets', {
+  telegramId: text('telegram_id').primaryKey(),
+  windowStart: integer('window_start', { mode: 'timestamp' }).notNull(),
+  requestCount: integer('request_count').notNull().default(0),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

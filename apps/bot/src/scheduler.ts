@@ -1,11 +1,11 @@
 import cron from 'node-cron';
 import type { ScheduledTask } from 'node-cron';
-import { InlineKeyboard } from 'grammy';
 import type { Bot } from 'grammy';
 import type { BotContext } from './types.js';
 import { db } from '@finance-bot/db';
-import { schedulerState } from '@finance-bot/db/schema';
+import { schedulerState, outboxMessages } from '@finance-bot/db/schema';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import {
   getActiveBudgets,
   getCurrentMonthTransactions,
@@ -22,9 +22,6 @@ import { buildSpending } from './helpers.js';
 import { openDashboardButton } from './keyboards.js';
 import { logger } from './lib/logger.js';
 
-const _rawDelay = Number(process.env.SCHEDULER_SEND_DELAY_MS);
-const SCHEDULER_SEND_DELAY_MS = Number.isFinite(_rawDelay) && _rawDelay >= 0 ? _rawDelay : 50;
-
 function isSilent(jobName: string): boolean {
   const silentDefault = process.env.SCHEDULER_SILENT_DEFAULT === 'true';
   try {
@@ -38,23 +35,31 @@ function isSilent(jobName: string): boolean {
   }
 }
 
-async function sendToAll(
-  bot: Bot<BotContext>,
+function enqueueMessages(
   telegramIds: string[],
   message: string,
-  options: { disable_notification?: boolean; reply_markup?: InlineKeyboard } = {},
-): Promise<void> {
-  for (const id of telegramIds) {
-    try {
-      await bot.api.sendMessage(id, message, options);
-    } catch (err) {
-      logger.error({ action: 'scheduler_send_failed', telegramId: id, errorMessage: (err as Error).message });
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, SCHEDULER_SEND_DELAY_MS));
-  }
+  options: { disable_notification?: boolean } = {},
+  batchId: string = randomUUID(),
+): void {
+  if (telegramIds.length === 0) return;
+  const now = new Date();
+  const rows = telegramIds.map((id) => ({
+    telegramId: id,
+    text: message,
+    parseMode: 'MarkdownV2',
+    disableNotification: options.disable_notification ?? false,
+    status: 'pending' as const,
+    attempts: 0,
+    maxAttempts: 5,
+    sendAfter: now,
+    batchId,
+    createdAt: now,
+  }));
+  db.insert(outboxMessages).values(rows).run();
+  logger.info({ action: 'outbox_enqueued', count: rows.length, batchId });
 }
 
-async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
+function sendDailyBudgetAlerts(): void {
   const activeBudgets = getActiveBudgets();
   const txns = getCurrentMonthTransactions();
   const spending = buildSpending(txns);
@@ -68,10 +73,10 @@ async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
   const silent = isSilent('daily-budget-alerts');
   const adminIds = getAdminUsers().map((u) => u.telegramId);
   const message = `⚠️ *התראת תקציב יומית*\n\n${formatBudgetMessage(exceeded, spending)}`;
-  await sendToAll(bot, adminIds, message, { disable_notification: silent });
+  enqueueMessages(adminIds, message, { disable_notification: silent });
 }
 
-async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
+function sendWeeklySummary(): void {
   const users = getAllUsers();
   const accountRows = getAllAccountsWithBank();
   const txns = getCurrentMonthTransactions();
@@ -80,31 +85,32 @@ async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
   const balancesText = formatBalancesMessage(accountRows);
   const summaryText = formatSummaryMessage(spending, activeBudgets);
   const message = `📊 *סיכום שבועי*\n\n*יתרות:*\n${balancesText}\n\n*הוצאות החודש:*\n${summaryText}`;
+  const replyMarkupJson = JSON.stringify(openDashboardButton());
 
   const silent = isSilent('weekly-summary');
-  const keyboard = new InlineKeyboard().add(openDashboardButton());
+  const now = new Date();
+  const batchId = randomUUID();
 
-  for (const user of users) {
-    const chatId = user.telegramId;
-    try {
-      const msg = await bot.api.sendMessage(chatId, message, {
-        disable_notification: silent,
-        reply_markup: keyboard,
-      });
+  const rows = users.map((user) => ({
+    telegramId: user.telegramId,
+    text: message,
+    parseMode: 'MarkdownV2',
+    disableNotification: silent,
+    replyMarkupJson,
+    status: 'pending' as const,
+    attempts: 0,
+    maxAttempts: 5,
+    sendAfter: now,
+    batchId,
+    createdAt: now,
+  }));
 
-      try {
-        await bot.api.pinChatMessage(chatId, msg.message_id, { disable_notification: true });
-      } catch (pinErr) {
-        logger.warn({ action: 'pin_failed', chatId, errorMessage: (pinErr as Error).message });
-      }
-    } catch (err) {
-      logger.error({ action: 'scheduler_send_failed', telegramId: chatId, errorMessage: (err as Error).message });
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, SCHEDULER_SEND_DELAY_MS));
-  }
+  if (rows.length === 0) return;
+  db.insert(outboxMessages).values(rows).run();
+  logger.info({ action: 'outbox_enqueued', count: rows.length, batchId, job: 'weekly-summary' });
 }
 
-async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
+function sendMonthlySummary(): void {
   const users = getAllUsers();
   const activeBudgets = getActiveBudgets();
   const txns = getCurrentMonthTransactions();
@@ -113,20 +119,32 @@ async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
   const message = `📈 *סיכום חודשי*\n\n${formatBudgetMessage(activeBudgets, spending)}`;
 
   const silent = isSilent('monthly-report');
-  await sendToAll(bot, activeUsers.map((u) => u.telegramId), message, { disable_notification: silent });
+  enqueueMessages(activeUsers.map((u) => u.telegramId), message, { disable_notification: silent });
 }
 
-export function startScheduler(bot: Bot<BotContext>): ScheduledTask[] {
+export function startScheduler(_bot: Bot<BotContext>): ScheduledTask[] {
   const daily = cron.schedule('0 8 * * *', () => {
-    sendDailyBudgetAlerts(bot).catch((err) => logger.error({ action: 'daily_alert_failed', errorMessage: (err as Error).message }));
+    try {
+      sendDailyBudgetAlerts();
+    } catch (err) {
+      logger.error({ action: 'daily_alert_failed', errorMessage: (err as Error).message });
+    }
   }, { timezone: 'Asia/Jerusalem' });
 
   const weekly = cron.schedule('0 8 * * 0', () => {
-    sendWeeklySummary(bot).catch((err) => logger.error({ action: 'weekly_summary_failed', errorMessage: (err as Error).message }));
+    try {
+      sendWeeklySummary();
+    } catch (err) {
+      logger.error({ action: 'weekly_summary_failed', errorMessage: (err as Error).message });
+    }
   }, { timezone: 'Asia/Jerusalem' });
 
   const monthly = cron.schedule('0 8 1 * *', () => {
-    sendMonthlySummary(bot).catch((err) => logger.error({ action: 'monthly_summary_failed', errorMessage: (err as Error).message }));
+    try {
+      sendMonthlySummary();
+    } catch (err) {
+      logger.error({ action: 'monthly_summary_failed', errorMessage: (err as Error).message });
+    }
   }, { timezone: 'Asia/Jerusalem' });
 
   logger.info({ action: 'scheduler_registered', jobs: ['daily_alerts', 'weekly_summary', 'monthly_summary'] });

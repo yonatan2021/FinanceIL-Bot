@@ -36,6 +36,13 @@
       "when": 1776535355610,
       "tag": "0004_charming_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776676942276,
+      "tag": "0005_charming_enchantress",
+      "breakpoints": true
     }
   ]
 }
