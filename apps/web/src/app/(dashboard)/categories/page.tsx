@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -298,6 +299,7 @@ export default function CategoriesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>הוסף כלל קטגוריזציה</DialogTitle>
+            <DialogDescription className="sr-only">הגדר תבנית ביטוי רגולרי וקטגוריה ליצירת כלל קטגוריזציה אוטומטית</DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => void handleAddRule(e)} className="space-y-4">
             <div className="space-y-1.5">

@@ -15,6 +15,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -173,6 +174,7 @@ export default function BotMessagesPage() {
                             <DialogTitle>
                               שליחה ישירה ל-{u.name ?? u.telegramId}
                             </DialogTitle>
+                            <DialogDescription className="sr-only">הזן הודעה לשליחה ישירה למשתמש</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-3 pt-2">
                             <textarea

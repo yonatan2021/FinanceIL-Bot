@@ -22,6 +22,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -110,6 +111,7 @@ export function UsersClient({ initialUsers }: Props) {
           <DialogContent dir="rtl">
             <DialogHeader>
               <DialogTitle>הוספת משתמש טלגרם</DialogTitle>
+              <DialogDescription className="sr-only">הזן פרטי משתמש טלגרם חדש להוספה לרשימת המשתמשים המורשים</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-4 pt-2">
               <div className="space-y-2">

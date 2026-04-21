@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -122,6 +123,7 @@ export function BudgetsClient({ initialBudgets }: Props) {
               <DialogTitle>
                 {editing ? "עריכת קטגוריה" : "קטגוריה חדשה"}
               </DialogTitle>
+              <DialogDescription className="sr-only">הגדר תקרה חודשית וסף התראה לקטגוריה</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-2">
               <div className="space-y-2">
