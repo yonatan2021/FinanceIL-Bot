@@ -119,3 +119,4 @@ docs/_old_/*
 claude.md
 !CLAUDE.md
 claude.md
+.worktrees/
