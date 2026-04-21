@@ -1,10 +1,11 @@
+import { randomUUID } from 'crypto';
 import cron from 'node-cron';
 import type { ScheduledTask } from 'node-cron';
 import { InlineKeyboard } from 'grammy';
 import type { Bot } from 'grammy';
 import type { BotContext } from './types.js';
 import { db } from '@finance-bot/db';
-import { schedulerState } from '@finance-bot/db/schema';
+import { schedulerState, outboxMessages } from '@finance-bot/db/schema';
 import { eq } from 'drizzle-orm';
 import {
   getActiveBudgets,
@@ -38,20 +39,31 @@ function isSilent(jobName: string): boolean {
   }
 }
 
-async function sendToAll(
-  bot: Bot<BotContext>,
-  telegramIds: string[],
-  message: string,
-  options: { disable_notification?: boolean; reply_markup?: InlineKeyboard } = {},
-): Promise<void> {
-  for (const id of telegramIds) {
-    try {
-      await bot.api.sendMessage(id, message, options);
-    } catch (err) {
-      logger.error({ action: 'scheduler_send_failed', telegramId: id, errorMessage: (err as Error).message });
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, SCHEDULER_SEND_DELAY_MS));
-  }
+function sendToAll(
+  telegramIds: number[],
+  text: string,
+  options: { parseMode?: string; disableNotification?: boolean } = {},
+): void {
+  if (telegramIds.length === 0) return;
+
+  const batchId = randomUUID();
+  const now = new Date();
+
+  db.insert(outboxMessages)
+    .values(
+      telegramIds.map((telegramId) => ({
+        telegramId,
+        text,
+        parseMode: options.parseMode ?? 'MarkdownV2',
+        disableNotification: options.disableNotification ?? false,
+        batchId,
+        sendAfter: now,
+        maxAttempts: 3,
+      }))
+    )
+    .execute();
+
+  logger.info({ action: 'outbox_batch_enqueued', batchId, count: telegramIds.length });
 }
 
 async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
@@ -66,9 +78,9 @@ async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
   if (exceeded.length === 0) return;
 
   const silent = isSilent('daily-budget-alerts');
-  const adminIds = getAdminUsers().map((u) => u.telegramId);
+  const adminIds = getAdminUsers().map((u) => Number(u.telegramId));
   const message = `⚠️ *התראת תקציב יומית*\n\n${formatBudgetMessage(exceeded, spending)}`;
-  await sendToAll(bot, adminIds, message, { disable_notification: silent });
+  sendToAll(adminIds, message, { disableNotification: silent });
 }
 
 async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
@@ -113,7 +125,7 @@ async function sendMonthlySummary(bot: Bot<BotContext>): Promise<void> {
   const message = `📈 *סיכום חודשי*\n\n${formatBudgetMessage(activeBudgets, spending)}`;
 
   const silent = isSilent('monthly-report');
-  await sendToAll(bot, activeUsers.map((u) => u.telegramId), message, { disable_notification: silent });
+  sendToAll(activeUsers.map((u) => Number(u.telegramId)), message, { disableNotification: silent });
 }
 
 export function startScheduler(bot: Bot<BotContext>): ScheduledTask[] {
