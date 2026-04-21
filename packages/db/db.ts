@@ -64,3 +64,4 @@ sqlite.pragma('foreign_keys=ON');
 
 export const db = drizzle(sqlite, { schema });
 export type DB = typeof db;
+export const client: InstanceType<typeof Database> = sqlite; // raw better-sqlite3 instance for BEGIN IMMEDIATE transactions

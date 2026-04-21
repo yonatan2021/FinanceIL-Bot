@@ -128,3 +128,58 @@ export const categoryRules = sqliteTable('category_rules', {
   isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+// SQLite-backed job queue for background tasks
+export const jobQueue = sqliteTable('job_queue', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  type: text('type', {
+    enum: ['scrape_all', 'scrape_credential', 'broadcast_scheduled'],
+  }).notNull(),
+  payload: text('payload').notNull().default('{}'),
+  status: text('status', {
+    enum: ['pending', 'running', 'done', 'failed', 'dead'],
+  }).notNull().default('pending'),
+  runAfter: integer('run_after', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  correlationId: text('correlation_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  startedAt: integer('started_at', { mode: 'timestamp' }),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+  result: text('result'),
+}, (table) => ({
+  statusRunAfterIdx: index('job_queue_status_run_after_idx').on(table.status, table.runAfter),
+  typeCreatedAtIdx: index('job_queue_type_created_at_idx').on(table.type, table.createdAt),
+}));
+
+// Outbox pattern: Telegram messages queued for reliable delivery
+export const outboxMessages = sqliteTable('outbox_messages', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  telegramId: integer('telegram_id', { mode: 'number' }).notNull(),
+  text: text('text').notNull(),
+  parseMode: text('parse_mode'),
+  disableNotification: integer('disable_notification', { mode: 'boolean' }).notNull().default(false),
+  replyMarkupJson: text('reply_markup_json'),
+  status: text('status', {
+    enum: ['pending', 'running', 'sent', 'failed', 'dead'],
+  }).notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  sendAfter: integer('send_after', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  batchId: text('batch_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  sentAt: integer('sent_at', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+}, (table) => ({
+  statusSendAfterIdx: index('outbox_status_send_after_idx').on(table.status, table.sendAfter),
+  batchIdIdx: index('outbox_batch_id_idx').on(table.batchId),
+}));
+
+// Per-user rate limit sliding window buckets
+export const rateLimitBuckets = sqliteTable('rate_limit_buckets', {
+  telegramId: integer('telegram_id', { mode: 'number' }).primaryKey(),
+  windowStart: integer('window_start', { mode: 'timestamp' }).notNull(),
+  requestCount: integer('request_count').notNull().default(1),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
