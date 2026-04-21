@@ -109,3 +109,70 @@ export interface CategoryRule {
   isActive: boolean;
   createdAt: Date;
 }
+
+// ── Queue ───────────────────────────────────────────────
+
+export type JobType = 'scrape_all' | 'scrape_credential' | 'broadcast_scheduled';
+
+export type JobStatus = 'pending' | 'running' | 'done' | 'failed' | 'dead';
+
+export type OutboxStatus = 'pending' | 'running' | 'sent' | 'failed' | 'dead';
+
+export interface ScrapeAllPayload {
+  triggeredBy: 'scheduler' | 'admin';
+}
+
+export interface ScrapeCredentialPayload {
+  credentialId: number;
+  triggeredBy: 'scheduler' | 'admin';
+}
+
+export interface BroadcastScheduledPayload {
+  batchId: string;
+  target: 'all' | 'admins';
+}
+
+export type JobPayload =
+  | ScrapeAllPayload
+  | ScrapeCredentialPayload
+  | BroadcastScheduledPayload;
+
+export interface JobQueueRow {
+  id: number;
+  type: JobType;
+  payload: string; // JSON-serialized JobPayload
+  status: JobStatus;
+  runAfter: Date;
+  attempts: number;
+  maxAttempts: number;
+  correlationId: string | null;
+  createdAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  lastError: string | null;
+  result: string | null;
+}
+
+export interface OutboxMessageRow {
+  id: number;
+  telegramId: number;
+  text: string;
+  parseMode: string | null;
+  disableNotification: boolean;
+  replyMarkupJson: string | null;
+  status: OutboxStatus;
+  attempts: number;
+  maxAttempts: number;
+  sendAfter: Date;
+  batchId: string | null;
+  createdAt: Date;
+  sentAt: Date | null;
+  lastError: string | null;
+}
+
+export interface RateLimitBucketRow {
+  telegramId: number;
+  windowStart: Date;
+  requestCount: number;
+  updatedAt: Date;
+}
