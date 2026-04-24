@@ -9,18 +9,20 @@ const BATCH_SIZE = 20;
 const TICK_MS = 1000;
 const DEAD_ALERT_COOLDOWN_MS = 3_600_000; // 1 hour
 const BACKOFF_BASE_MS = 10_000;
+const MAX_BACKOFF_MS = 10 * 60_000; // 10 minutes
 
 function backoffMs(attempts: number): number {
-  return Math.min(BACKOFF_BASE_MS * 2 ** (attempts - 1), 10 * 60_000);
+  return Math.min(BACKOFF_BASE_MS * 2 ** (attempts - 1), MAX_BACKOFF_MS);
 }
 
+// Snake_case mirrors raw SQLite column names returned by better-sqlite3 prepared statements.
+// Drizzle ORM uses camelCase, but raw SQL results use the DB column names directly.
 interface OutboxClaimResult {
   id: number;
   telegram_id: number;
   text: string;
   parse_mode: string | null;
   disable_notification: number;
-  reply_markup_json: string | null;
   attempts: number;
   max_attempts: number;
 }
@@ -29,15 +31,17 @@ interface OutboxClaimResult {
 // client.transaction(fn) returns a new function — call it directly (no cast).
 function claimMessages(now: Date): OutboxClaimResult[] {
   const claimTx = client.transaction(() => {
+    // Drizzle stores timestamps as Unix seconds; pass seconds here to match.
+    const nowSec = Math.floor(now.getTime() / 1000);
     const rows = client
       .prepare(
-        `SELECT id, telegram_id, text, parse_mode, disable_notification, reply_markup_json, attempts, max_attempts
+        `SELECT id, telegram_id, text, parse_mode, disable_notification, attempts, max_attempts
          FROM outbox_messages
          WHERE status = 'pending' AND send_after <= ?
          ORDER BY send_after ASC
          LIMIT ?`
       )
-      .all(now.getTime(), BATCH_SIZE) as OutboxClaimResult[];
+      .all(nowSec, BATCH_SIZE) as OutboxClaimResult[];
 
     if (rows.length === 0) return rows;
 
@@ -138,10 +142,11 @@ export function createOutboxWorker(bot: Bot<BotContext>, adminChatId: number) {
 
   return {
     start(): void {
-      // Recover messages stuck in 'running' from previous crash
+      // Recover messages stuck in 'running' from previous crash.
+      // send_after is stored as Unix seconds — pass Math.floor(ms/1000).
       client
         .prepare(`UPDATE outbox_messages SET status = 'pending', send_after = ? WHERE status = 'running'`)
-        .run(Date.now());
+        .run(Math.floor(Date.now() / 1000));
       logger.info({ action: 'outbox_worker_started' });
       setTimeout(tick, TICK_MS);
     },

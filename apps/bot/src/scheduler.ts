@@ -83,6 +83,9 @@ async function sendDailyBudgetAlerts(bot: Bot<BotContext>): Promise<void> {
   sendToAll(adminIds, message, { disableNotification: silent });
 }
 
+// sendWeeklySummary intentionally bypasses the outbox: it needs the message_id
+// returned by sendMessage in order to call pinChatMessage. The outbox does not
+// return message IDs. Retry and rate-limiting are handled by @grammyjs/auto-retry.
 async function sendWeeklySummary(bot: Bot<BotContext>): Promise<void> {
   const users = getAllUsers();
   const accountRows = getAllAccountsWithBank();
