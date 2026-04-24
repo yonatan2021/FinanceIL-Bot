@@ -5,7 +5,7 @@ config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env')
 import { Bot, session } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import { conversations, createConversation } from '@grammyjs/conversations';
-import { limit } from '@grammyjs/ratelimiter';
+import { sqliteRateLimit } from './middleware/sqliteRateLimit.js';
 import type { ScheduledTask } from 'node-cron';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@finance-bot/db';
@@ -56,13 +56,7 @@ if (process.env.NODE_ENV === 'development') {
 bot.use(session<SessionData, BotContext>({ initial: () => ({} as SessionData) }));
 bot.use(conversations());
 bot.use(createConversation(searchWizard));
-bot.use(limit({
-  timeFrame: 1000,
-  limit: 1,
-  onLimitExceeded: async (ctx) => {
-    await ctx?.reply('יותר מדי בקשות, המתן רגע.').catch(() => {});
-  },
-}));
+bot.use(sqliteRateLimit);
 bot.use(authMiddleware);
 bot.use(menuHandlers);
 bot.use(dataHandlers);
