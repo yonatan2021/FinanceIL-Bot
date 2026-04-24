@@ -18,6 +18,8 @@ import { adminHandlers } from './handlers/admin.js';
 import { searchHandlers } from './handlers/search.js';
 import { searchWizard } from './conversations/searchWizard.js';
 import { startScheduler } from './scheduler.js';
+import { createOutboxWorker } from './workers/outboxWorker.js';
+import { getAdminUsers } from './queries.js';
 import { logger } from './lib/logger.js';
 
 const token = process.env.BOT_TOKEN;
@@ -26,7 +28,7 @@ if (!token) throw new Error('BOT_TOKEN environment variable is required');
 const bot = new Bot<BotContext>(token);
 
 // Handle Telegram 429 and 5xx via @grammyjs/auto-retry (3 retries, exponential backoff).
-// The 50ms per-send delay in scheduler.ts provides additional headroom.
+// Outbox worker (outboxWorker.ts) handles rate-limited sends with dead-letter monitoring.
 bot.api.config.use(autoRetry());
 
 // Inject MarkdownV2 as default parse_mode for all API calls
@@ -86,7 +88,16 @@ bot.catch(async (err) => {
 
 const schedulerTasks: ScheduledTask[] = startScheduler(bot);
 
+const adminUsers = getAdminUsers();
+const adminChatId = adminUsers[0] ? Number(adminUsers[0].telegramId) : 0;
+if (!adminUsers[0]) {
+  logger.warn({ action: 'outbox_worker_no_admin', message: 'No admin user found, dead-letter alerts disabled' });
+}
+const outboxWorker = createOutboxWorker(bot, adminChatId);
+outboxWorker.start();
+
 const shutdown = async (): Promise<void> => {
+  outboxWorker.stop();
   schedulerTasks.forEach((t) => t.stop());
   await bot.stop();
 };
