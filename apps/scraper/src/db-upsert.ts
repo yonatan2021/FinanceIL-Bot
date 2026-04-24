@@ -1,10 +1,12 @@
 import { db } from '@finance-bot/db';
 import { accounts, transactions } from '@finance-bot/db/schema';
-import type { Account, Transaction } from 'israeli-bank-scrapers/lib/transactions.js';
+import { sql } from 'drizzle-orm';
+import type { TransactionsAccount, Transaction } from 'israeli-bank-scrapers/lib/transactions.d.ts';
 import crypto from 'crypto';
 
-export async function upsertScrapedData(credentialId: string, scrapedAccounts: Account[]) {
+export async function upsertScrapedData(credentialId: string, scrapedAccounts: TransactionsAccount[]) {
   const now = new Date();
+  let totalProcessed = 0;
   
   for (const account of scrapedAccounts) {
     const accountId = crypto.createHash('sha256').update(`${credentialId}-${account.accountNumber}`).digest('hex');
@@ -14,14 +16,15 @@ export async function upsertScrapedData(credentialId: string, scrapedAccounts: A
       id: accountId,
       credentialId,
       accountNumber: account.accountNumber,
-      balance: account.balance,
+      balance: account.balance ?? 0,
       lastUpdatedAt: now,
     }).onConflictDoUpdate({
       target: accounts.id,
-      set: { balance: account.balance, lastUpdatedAt: now }
+      set: { balance: account.balance ?? 0, lastUpdatedAt: now }
     });
 
     if (!account.txns || account.txns.length === 0) continue;
+    totalProcessed += account.txns.length;
 
     // Prepare transactions based on explicit israeli-bank-scrapers Transaction types
     const txnsToInsert = account.txns.map((t: Transaction) => ({
@@ -44,6 +47,7 @@ export async function upsertScrapedData(credentialId: string, scrapedAccounts: A
       });
     }
   }
+  return totalProcessed;
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {

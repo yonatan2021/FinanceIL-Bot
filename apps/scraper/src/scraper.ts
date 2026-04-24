@@ -3,7 +3,7 @@ import { credentials, scrapeLogs } from '@finance-bot/db/schema';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@finance-bot/utils/crypto';
 import { createScraper } from 'israeli-bank-scrapers';
-import type { ScraperOptions } from 'israeli-bank-scrapers';
+import type { ScraperOptions } from 'israeli-bank-scrapers/lib/index.d.ts';
 import { upsertScrapedData } from './db-upsert.js';
 import crypto from 'crypto';
 
@@ -43,11 +43,7 @@ export async function runScraperForCredential(credentialId: string) {
 
     // Process accounts and transactions
     if (scrapeResult.accounts) {
-      await upsertScrapedData(credentialId, scrapeResult.accounts);
-      // 'transactionsFetched' strictly tracks the number of raw transactions returned by the scraper
-      for (const acc of scrapeResult.accounts) {
-        fetchedTransactionsCount += acc.txns?.length || 0;
-      }
+      fetchedTransactionsCount = await upsertScrapedData(credentialId, scrapeResult.accounts);
     }
     
     await db.update(scrapeLogs)
