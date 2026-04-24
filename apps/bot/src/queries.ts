@@ -8,10 +8,11 @@ import {
   budgets,
   scrapeLogs,
   credentials,
+  jobQueue,
 } from '@finance-bot/db/schema';
 import { currentMonthRange } from '@finance-bot/utils/dates';
 import { queryCache, CACHE_KEYS, CACHE_TTLS } from '@finance-bot/utils/cache';
-import type { Transaction, AllowedUser, Budget, ScrapeLog } from '@finance-bot/types';
+import type { Transaction, AllowedUser, Budget, ScrapeLog, ScrapeAllPayload } from '@finance-bot/types';
 
 export interface AccountWithBank {
   accountNumber: string;
@@ -279,4 +280,11 @@ export function checkAndIncrementRateLimit(
 
 export function cleanupStaleRateLimitBuckets(cutoffMs: number): void {
   client.prepare(`DELETE FROM rate_limit_buckets WHERE updated_at < ?`).run(cutoffMs);
+}
+
+export function enqueueScrapeAll(triggeredBy: ScrapeAllPayload['triggeredBy']): void {
+  const payload: ScrapeAllPayload = { triggeredBy };
+  db.insert(jobQueue)
+    .values({ type: 'scrape_all', payload: JSON.stringify(payload), maxAttempts: 3 })
+    .execute();
 }
