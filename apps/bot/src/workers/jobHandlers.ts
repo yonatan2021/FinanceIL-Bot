@@ -1,3 +1,4 @@
+import { escapeMarkdownV2 } from '@finance-bot/utils/markdown';
 import { logger } from '../lib/logger.js';
 import type { Bot } from 'grammy';
 import type { BotContext } from '../types.js';
@@ -9,7 +10,8 @@ import type {
 } from '@finance-bot/types';
 
 const WEB_INTERNAL_URL = process.env.WEB_INTERNAL_URL ?? 'http://web:5200';
-const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET ?? '';
+const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+if (!INTERNAL_API_SECRET) throw new Error('INTERNAL_API_SECRET env var is required');
 
 async function callScrapeApi(credentialId?: number): Promise<{ success: boolean; message: string }> {
   const url = `${WEB_INTERNAL_URL}/api/scrape`;
@@ -44,7 +46,7 @@ export async function handleScrapeAll(
     : `❌ סקריפציה נכשלה: ${result.message}`;
 
   if (adminChatId !== 0) {
-    await bot.api.sendMessage(adminChatId, msg);
+    await bot.api.sendMessage(adminChatId, msg, { parse_mode: undefined });
   }
   return msg;
 }
@@ -63,9 +65,10 @@ export async function handleScrapeCredential(
 
   const result = await callScrapeApi(payload.credentialId);
 
+  const escapedId = escapeMarkdownV2(String(payload.credentialId));
   const msg = result.success
-    ? `✅ סקריפציה של credential ${payload.credentialId} הושלמה`
-    : `❌ סקריפציה של credential ${payload.credentialId} נכשלה: ${result.message}`;
+    ? `✅ סקריפציה של credential ${escapedId} הושלמה`
+    : `❌ סקריפציה של credential ${escapedId} נכשלה: ${escapeMarkdownV2(result.message)}`;
 
   if (adminChatId !== 0) {
     await bot.api.sendMessage(adminChatId, msg);

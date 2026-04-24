@@ -41,16 +41,36 @@ function claimJob(now: Date): JobQueueRow | null {
       )
       .run(nowSec, row['id']);
 
-    return row as unknown as JobQueueRow;
+    // Map snake_case DB columns to camelCase JobQueueRow.
+    // attempts is the post-increment value (DB was just updated).
+    const attempts = (row['attempts'] as number) + 1;
+    return {
+      id: row['id'] as number,
+      type: row['type'] as JobQueueRow['type'],
+      payload: row['payload'] as string,
+      status: 'running' as const,
+      attempts,
+      maxAttempts: row['max_attempts'] as number,
+      runAfter: new Date((row['run_after'] as number) * 1000),
+      correlationId: row['correlation_id'] as string | null,
+      createdAt: new Date((row['created_at'] as number) * 1000),
+      startedAt: new Date(),
+      finishedAt: null,
+      lastError: row['last_error'] as string | null,
+      result: row['result'] as string | null,
+    } as JobQueueRow;
   });
 
   return claimTx();
 }
 
 function recoverRunningJobs(): void {
-  client
+  const result = client
     .prepare(`UPDATE job_queue SET status = 'pending', started_at = NULL WHERE status = 'running'`)
     .run();
+  if (result.changes > 0) {
+    logger.warn({ action: 'job_zombie_recovered', count: result.changes });
+  }
 }
 
 export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
@@ -73,8 +93,9 @@ export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
             )
           )
           .execute();
-      } catch {
+      } catch (err) {
         // prune failure must never crash worker
+        logger.error({ action: 'job_prune_failed', error: String(err) });
       }
     }
 
@@ -83,7 +104,7 @@ export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
       job = claimJob(now);
     } catch (err) {
       logger.error({ action: 'job_claim_failed', error: String(err) });
-      if (!shouldStop) setTimeout(tick, 0);
+      if (!shouldStop) setTimeout(tick, TICK_MS);
       return;
     }
 
@@ -104,7 +125,8 @@ export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
       } else if (job.type === 'broadcast_scheduled') {
         result = await handleBroadcastScheduled(job);
       } else {
-        throw new Error(`Unknown job type: ${(job as JobQueueRow).type}`);
+        const _exhaustive: never = job.type;
+        throw new Error(`Unknown job type: ${String(_exhaustive)}`);
       }
 
       db.update(jobQueue)
@@ -119,7 +141,7 @@ export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
 
       db.update(jobQueue)
         .set({
-          status: isDead ? 'dead' : 'failed',
+          status: isDead ? 'dead' : 'pending',
           finishedAt: isDead ? new Date() : undefined,
           lastError: String(err),
           runAfter: isDead ? undefined : nextRunAfter,
