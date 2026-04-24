@@ -179,7 +179,7 @@ export const outboxMessages = sqliteTable('outbox_messages', {
 // Per-user rate limit sliding window buckets
 export const rateLimitBuckets = sqliteTable('rate_limit_buckets', {
   telegramId: integer('telegram_id', { mode: 'number' }).primaryKey(),
-  windowStart: integer('window_start', { mode: 'timestamp' }).notNull(),
+  windowStart: integer('window_start').notNull(),
   requestCount: integer('request_count').notNull().default(1),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at').notNull().$defaultFn(() => Date.now()),
 });

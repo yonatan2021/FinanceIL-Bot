@@ -1,6 +1,6 @@
 import { eq, and, desc, gte, lte, sql, like } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
-import { db } from '@finance-bot/db';
+import { db, client } from '@finance-bot/db';
 import {
   allowedUsers,
   accounts,
@@ -8,10 +8,11 @@ import {
   budgets,
   scrapeLogs,
   credentials,
+  jobQueue,
 } from '@finance-bot/db/schema';
 import { currentMonthRange } from '@finance-bot/utils/dates';
 import { queryCache, CACHE_KEYS, CACHE_TTLS } from '@finance-bot/utils/cache';
-import type { Transaction, AllowedUser, Budget, ScrapeLog } from '@finance-bot/types';
+import type { Transaction, AllowedUser, Budget, ScrapeLog, ScrapeAllPayload } from '@finance-bot/types';
 
 export interface AccountWithBank {
   accountNumber: string;
@@ -247,4 +248,43 @@ export function invalidateAfterScrape(): void {
   queryCache.delete(CACHE_KEYS.BUDGETS);
   queryCache.delete(CACHE_KEYS.SCRAPE_LOG);
   queryCache.invalidatePrefix(CACHE_KEYS.TRANSACTIONS_CURRENT);
+}
+
+export function checkAndIncrementRateLimit(
+  telegramId: number,
+  now: number,
+  windowMs: number,
+  maxRequests: number,
+): boolean {
+  const checkTx = client.transaction(() => {
+    const row = client
+      .prepare(`SELECT window_start, request_count FROM rate_limit_buckets WHERE telegram_id = ?`)
+      .get(telegramId) as { window_start: number; request_count: number } | undefined;
+
+    const windowStart = row ? row.window_start : now;
+    const isNewWindow = now - windowStart >= windowMs;
+    const count = isNewWindow ? 1 : (row?.request_count ?? 0) + 1;
+    const newWindowStart = isNewWindow ? now : windowStart;
+
+    client
+      .prepare(
+        `INSERT OR REPLACE INTO rate_limit_buckets (telegram_id, window_start, request_count, updated_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(telegramId, newWindowStart, count, now);
+
+    return count <= maxRequests;
+  });
+  return checkTx();
+}
+
+export function cleanupStaleRateLimitBuckets(cutoffMs: number): void {
+  client.prepare(`DELETE FROM rate_limit_buckets WHERE updated_at < ?`).run(cutoffMs);
+}
+
+export function enqueueScrapeAll(triggeredBy: ScrapeAllPayload['triggeredBy']): void {
+  const payload: ScrapeAllPayload = { triggeredBy };
+  db.insert(jobQueue)
+    .values({ type: 'scrape_all', payload: JSON.stringify(payload), maxAttempts: 3 })
+    .execute();
 }
