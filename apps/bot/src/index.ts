@@ -19,6 +19,7 @@ import { searchHandlers } from './handlers/search.js';
 import { searchWizard } from './conversations/searchWizard.js';
 import { startScheduler } from './scheduler.js';
 import { createOutboxWorker } from './workers/outboxWorker.js';
+import { createJobWorker } from './workers/jobWorker.js';
 import { getAdminUsers } from './queries.js';
 import { logger } from './lib/logger.js';
 
@@ -91,7 +92,11 @@ if (!firstAdmin) {
 const outboxWorker = createOutboxWorker(bot, adminChatId);
 outboxWorker.start();
 
+const jobWorker = createJobWorker(bot, adminChatId);
+jobWorker.start();
+
 const shutdown = async (): Promise<void> => {
+  jobWorker.stop();
   outboxWorker.stop();
   schedulerTasks.forEach((t) => t.stop());
   await bot.stop();
