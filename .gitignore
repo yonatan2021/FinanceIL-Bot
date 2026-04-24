@@ -70,7 +70,7 @@ traces/
 **/AGENTS.md
 **/GEMINI.md
 **/claude.md
-!CLAUDE.md
+**/CLAUDE.md
 **/tech-audit-report.md
 .husky/*
 
@@ -117,6 +117,5 @@ Desktop.ini
 .mcp.json
 docs/_old_/*
 claude.md
-!CLAUDE.md
-claude.md
+CLAUDE.md
 .worktrees/
