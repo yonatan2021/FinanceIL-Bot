@@ -59,7 +59,7 @@ Every API route must have:
 4. Response envelope: `{ success: true, data: ... }` or `{ error: "..." }`
 5. Never return `encryptedData` field — apply `safeCredential()` to strip it
 
-Bot-internal routes under `api/bot/` authenticate via `Authorization: Bearer ${INTERNAL_API_SECRET}` (not session).
+Routes under `api/bot/` are **dashboard management routes** (controlling the bot from the UI) — they use session auth like all other routes. The bot service does NOT call back into the web API. If future bot→web server-to-server routes are needed, place them under `api/internal/` and authenticate via `Authorization: Bearer ${INTERNAL_API_SECRET}` (not session).
 
 ## Auth Flow
 
