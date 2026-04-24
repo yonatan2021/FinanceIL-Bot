@@ -1,10 +1,11 @@
 export const dynamic = "force-dynamic";
 
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
-import { allowedUsers } from "@finance-bot/db/schema";
+import { allowedUsers, outboxMessages } from "@finance-bot/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -28,14 +29,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const broadcastTarget = target === "admins" ? "admins" : "all";
 
-  const token = process.env.BOT_TOKEN;
-  if (!token) {
-    return NextResponse.json(
-      { success: false, error: "BOT_TOKEN not configured" },
-      { status: 500 }
-    );
-  }
-
   const db = await getDb();
   const users =
     broadcastTarget === "admins"
@@ -45,21 +38,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           .where(and(eq(allowedUsers.role, "admin"), eq(allowedUsers.isActive, true)))
       : await db.select().from(allowedUsers).where(eq(allowedUsers.isActive, true));
 
-  let sent = 0;
-  let failed = 0;
-  for (const user of users) {
-    try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: user.telegramId, text: message }),
-      });
-      if (res.ok) sent++;
-      else failed++;
-    } catch {
-      failed++;
-    }
+  if (users.length === 0) {
+    return NextResponse.json({ success: true, enqueued: 0 });
   }
 
-  return NextResponse.json({ success: true, sent, failed });
+  const batchId = randomUUID();
+  const now = new Date();
+
+  await db
+    .insert(outboxMessages)
+    .values(
+      users.map(({ telegramId }) => ({
+        telegramId: Number(telegramId),
+        text: message.trim(),
+        parseMode: "MarkdownV2",
+        disableNotification: false,
+        batchId,
+        sendAfter: now,
+        maxAttempts: 3,
+      }))
+    )
+    .execute();
+
+  return NextResponse.json({ success: true, enqueued: users.length, batchId });
 }
