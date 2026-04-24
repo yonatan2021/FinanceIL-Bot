@@ -3,7 +3,8 @@ import type { MiddlewareFn } from 'grammy';
 import type { BotContext } from '../types.js';
 import { checkAndIncrementRateLimit, cleanupStaleRateLimitBuckets } from '../queries.js';
 
-const MAX_REQUESTS = 1; // max per 1-second window
+const WINDOW_MS = 1000; // 1-second sliding window
+const MAX_REQUESTS = 1; // max requests per window
 const CLEANUP_INTERVAL_MS = 60_000;
 const STALE_AGE_MS = 3_600_000; // delete buckets older than 1 hour
 
@@ -20,12 +21,12 @@ export const sqliteRateLimit: MiddlewareFn<BotContext> = async (ctx, next) => {
     lastCleanup = now;
     try {
       cleanupStaleRateLimitBuckets(now - STALE_AGE_MS);
-    } catch {
-      // cleanup failure must not block requests
+    } catch (err) {
+      logger.warn({ action: 'rate_limit_cleanup_failed', error: String(err) });
     }
   }
 
-  const allowed = checkAndIncrementRateLimit(telegramId, now, MAX_REQUESTS);
+  const allowed = checkAndIncrementRateLimit(telegramId, now, WINDOW_MS, MAX_REQUESTS);
   if (!allowed) {
     logger.info({ action: 'rate_limit_hit', telegramId });
     await ctx.reply('אנא המתן רגע לפני שליחת בקשה נוספת.');

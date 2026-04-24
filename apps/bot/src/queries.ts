@@ -252,6 +252,7 @@ export function invalidateAfterScrape(): void {
 export function checkAndIncrementRateLimit(
   telegramId: number,
   now: number,
+  windowMs: number,
   maxRequests: number,
 ): boolean {
   const checkTx = client.transaction(() => {
@@ -259,9 +260,8 @@ export function checkAndIncrementRateLimit(
       .prepare(`SELECT window_start, request_count FROM rate_limit_buckets WHERE telegram_id = ?`)
       .get(telegramId) as { window_start: number; request_count: number } | undefined;
 
-    const WINDOW_MS = 1000;
     const windowStart = row ? row.window_start : now;
-    const isNewWindow = now - windowStart >= WINDOW_MS;
+    const isNewWindow = now - windowStart >= windowMs;
     const count = isNewWindow ? 1 : (row?.request_count ?? 0) + 1;
     const newWindowStart = isNewWindow ? now : windowStart;
 
