@@ -125,7 +125,7 @@ export function createOutboxWorker(bot: Bot<BotContext>, adminChatId: number) {
 
       const deadCount = result?.deadCount ?? 0;
 
-      if (deadCount > 0 && Date.now() - lastDeadAlert > DEAD_ALERT_COOLDOWN_MS) {
+      if (deadCount > 0 && adminChatId !== 0 && Date.now() - lastDeadAlert > DEAD_ALERT_COOLDOWN_MS) {
         lastDeadAlert = Date.now();
         await bot.api.sendMessage(
           adminChatId,

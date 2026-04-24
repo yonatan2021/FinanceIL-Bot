@@ -89,8 +89,9 @@ bot.catch(async (err) => {
 const schedulerTasks: ScheduledTask[] = startScheduler(bot);
 
 const adminUsers = getAdminUsers();
-const adminChatId = adminUsers[0] ? Number(adminUsers[0].telegramId) : 0;
-if (!adminUsers[0]) {
+const firstAdmin = adminUsers[0];
+const adminChatId = firstAdmin ? Number(firstAdmin.telegramId) : 0;
+if (!firstAdmin) {
   logger.warn({ action: 'outbox_worker_no_admin', message: 'No admin user found, dead-letter alerts disabled' });
 }
 const outboxWorker = createOutboxWorker(bot, adminChatId);
