@@ -83,7 +83,7 @@ export function createJobWorker(bot: Bot<BotContext>, adminChatId: number) {
       job = claimJob(now);
     } catch (err) {
       logger.error({ action: 'job_claim_failed', error: String(err) });
-      if (!shouldStop) setTimeout(tick, TICK_MS);
+      if (!shouldStop) setTimeout(tick, 0);
       return;
     }
 
