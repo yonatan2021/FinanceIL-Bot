@@ -2,8 +2,8 @@ import { db } from '@finance-bot/db';
 import { credentials, scrapeLogs } from '@finance-bot/db/schema';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '@finance-bot/utils/crypto';
-import { createScraper } from 'israeli-bank-scrapers';
-import type { ScraperOptions } from 'israeli-bank-scrapers/lib/index.d.ts';
+import { createScraper, CompanyTypes } from 'israeli-bank-scrapers';
+import type { ScraperOptions } from 'israeli-bank-scrapers';
 import { upsertScrapedData } from './db-upsert.js';
 import crypto from 'crypto';
 
@@ -26,7 +26,7 @@ export async function runScraperForCredential(credentialId: string) {
 
   try {
     const options: ScraperOptions = {
-      companyId: cred.bankId as any,
+      companyId: cred.bankId as CompanyTypes,
       startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
       combineInstallments: false,
       showBrowser: false,
@@ -36,28 +36,28 @@ export async function runScraperForCredential(credentialId: string) {
     const scrapeResult = await scraper.scrape(authCredentials);
 
     if (!scrapeResult.success) {
-      throw new Error(`Scraping failed: ${scrapeResult.errorType} - ${scrapeResult.errorMessage || ''}`);
+      throw new Error(`Scraping failed: ${scrapeResult.errorType} - ${scrapeResult.errorMessage ?? ''}`);
     }
 
     let fetchedTransactionsCount = 0;
 
-    // Process accounts and transactions
-    if (scrapeResult.accounts) {
+    if (scrapeResult.accounts && scrapeResult.accounts.length > 0) {
       fetchedTransactionsCount = await upsertScrapedData(credentialId, scrapeResult.accounts);
     }
-    
+    // TODO: add structured logger warn when accounts is empty on success
+
     await db.update(scrapeLogs)
-      .set({ 
-        status: 'success', 
+      .set({
+        status: 'success',
         finishedAt: new Date(),
-        transactionsFetched: fetchedTransactionsCount 
+        transactionsFetched: fetchedTransactionsCount
       })
       .where(eq(scrapeLogs.id, logId));
 
   } catch (err) {
     await db.update(scrapeLogs)
-      .set({ 
-        status: 'error', 
+      .set({
+        status: 'error',
         finishedAt: new Date(),
         errorMessage: err instanceof Error ? err.message : String(err)
       })
