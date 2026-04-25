@@ -12,8 +12,7 @@
     "@finance-bot/db": "*",
     "@finance-bot/utils": "*",
     "@finance-bot/types": "*",
-    "israeli-bank-scrapers": "^3.0.0",
-    "playwright": "^1.40.0"
+    "israeli-bank-scrapers": "^6.7.4"
   },
   "devDependencies": {
     "tsx": "^4.7.0",
