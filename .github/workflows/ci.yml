@@ -17,6 +17,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Prevent puppeteer from downloading Chromium during npm ci.
+      # The scraper runs in Docker (with its own pinned Chromium image) — CI never runs it.
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
