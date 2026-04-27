@@ -21,6 +21,10 @@ jobs:
       # Prevent puppeteer from downloading Chromium during npm ci.
       # The scraper runs in Docker (with its own pinned Chromium image) — CI never runs it.
       PUPPETEER_SKIP_DOWNLOAD: 'true'
+      # ubuntu-latest has corepack enabled. Without this, corepack sees packageManager:npm@11
+      # and downloads npm@11 at runtime, which has a workspace regression that deletes the
+      # working directory mid-run. COREPACK_ENABLE_STRICT=0 makes corepack use the system npm.
+      COREPACK_ENABLE_STRICT: '0'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,24 +35,8 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
-      - name: Pre-install diagnostics
-        run: |
-          echo "=== pwd ===" && pwd
-          echo "=== package.json present: $(test -f package.json && echo YES || echo NO) ==="
-          echo "=== npm version: $(npm --version) ==="
-          echo "=== corepack enabled: $(corepack --version 2>/dev/null || echo 'no corepack') ==="
-          echo "=== packageManager field: ===" && cat package.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('packageManager', 'NOT SET'))"
-
       - name: Install dependencies
-        run: HUSKY=0 npm ci
-
-      - name: Post-install diagnostics
-        if: always()
-        run: |
-          echo "=== pwd ===" && (pwd || echo 'pwd failed')
-          echo "=== package.json present: $(test -f package.json && echo YES || echo NO) ==="
-          echo "=== npm debug log (last 50 lines): ==="
-          cat /home/runner/.npm/_logs/*.log 2>/dev/null | tail -50 || echo "no npm log"
+        run: npm ci
 
       - name: Build packages
         run: |
