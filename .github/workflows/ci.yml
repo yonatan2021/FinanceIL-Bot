@@ -25,6 +25,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Debug working tree after checkout
+        run: |
+          echo "=== pwd ===" && pwd
+          echo "=== root files ===" && ls -la
+          echo "=== package.json present ===" && test -f package.json && echo "YES" || echo "NO"
+          echo "=== git sparse-checkout status ===" && git sparse-checkout list 2>&1 || echo "(error listing)"
+          echo "=== core.sparseCheckout ===" && git config core.sparseCheckout 2>&1 || echo "(not set)"
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
