@@ -17,12 +17,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Prevent puppeteer from downloading Chromium during npm ci.
+      # The scraper runs in Docker (with its own pinned Chromium image) — CI never runs it.
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      # ubuntu-latest has corepack enabled. Without this, corepack sees packageManager:npm@11
+      # and downloads npm@11 at runtime, which has a workspace regression that deletes the
+      # working directory mid-run. COREPACK_ENABLE_STRICT=0 makes corepack use the system npm.
+      COREPACK_ENABLE_STRICT: '0'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -54,4 +62,3 @@ jobs:
           ENCRYPTION_KEY: "00000000000000000000000000000000"
           NEXT_PUBLIC_APP_URL: http://localhost:5200
         run: npm run build --workspace=apps/web
-
