@@ -23,16 +23,13 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          # setup-node@v6 auto-detects npm and caches by default (package-manager-cache: true).
-          # The npm cache was poisoned by a runner failure that left the workspace in a broken
-          # state; disabling it here until a clean cache can be re-established.
-          package-manager-cache: false
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
